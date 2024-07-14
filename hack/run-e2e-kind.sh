@@ -27,7 +27,8 @@ NAMESPACE=${NAMESPACE:-volcano-system}
 CLUSTER_NAME=${CLUSTER_NAME:-integration}
 
 export CLUSTER_CONTEXT="--name ${CLUSTER_NAME}"
-
+DEFAULT_KUBERNETES_IMAGE="kindest/node:v1.30.0"
+export KUBERNETES_IMAGE=${KUBERNETES_IMAGE:-$DEFAULT_KUBERNETES_IMAGE}
 export KIND_OPT=${KIND_OPT:="--config ${VK_ROOT}/hack/e2e-kind-config.yaml"}
 
 

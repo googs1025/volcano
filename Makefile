@@ -118,16 +118,16 @@ unit-test:
 	fi;
 
 e2e: images
-	./hack/run-e2e-kind.sh
+	KUBERNETES_IMAGE=$(KUBERNETES_IMAGE) ./hack/run-e2e-kind.sh
 
 e2e-test-schedulingbase: images
-	E2E_TYPE=SCHEDULINGBASE ./hack/run-e2e-kind.sh
+	E2E_TYPE=SCHEDULINGBASE KUBERNETES_IMAGE=${KUBERNETES_IMAGE} ./hack/run-e2e-kind.sh
 
 e2e-test-schedulingaction: images
-	E2E_TYPE=SCHEDULINGACTION ./hack/run-e2e-kind.sh
+	E2E_TYPE=SCHEDULINGACTION KUBERNETES_IMAGE=${KUBERNETES_IMAGE} ./hack/run-e2e-kind.sh
 
 e2e-test-jobp: images
-	E2E_TYPE=JOBP ./hack/run-e2e-kind.sh
+	E2E_TYPE=JOBP KUBERNETES_IMAGE=${KUBERNETES_IMAGE} ./hack/run-e2e-kind.sh
 
 e2e-test-jobseq: images
 	E2E_TYPE=JOBSEQ ./hack/run-e2e-kind.sh

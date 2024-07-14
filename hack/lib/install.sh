@@ -18,8 +18,8 @@
 function kind-up-cluster {
   check-kind
 
-  echo "Running kind: [kind create cluster ${CLUSTER_CONTEXT} ${KIND_OPT}]"
-  kind create cluster ${CLUSTER_CONTEXT} ${KIND_OPT}
+  echo "Running kind: [kind create cluster ${CLUSTER_CONTEXT} ${KIND_OPT} --image=${KUBERNETES_IMAGE}"
+  kind create cluster ${CLUSTER_CONTEXT} ${KIND_OPT} --image=${KUBERNETES_IMAGE}
 
   echo
   check-images
