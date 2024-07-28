@@ -365,11 +365,8 @@ func interPodAffinityScore(
 
 	workqueue.ParallelizeUntil(parallelizeContext, workerNum, len(nodeInfos), func(index int) {
 		nodeName := nodeInfos[index].Node().Name
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		s, status := interPodAffinity.Score(ctx, state, pod, nodeName)
+		s, status := interPodAffinity.Score(parallelizeContext, state, pod, nodeName)
 		if !status.IsSuccess() {
-			parallelizeCancel()
 			errCh <- fmt.Errorf("calculate inter pod affinity priority failed %v", status.Message())
 			return
 		}
@@ -424,11 +421,8 @@ func taintTolerationScore(
 
 	workqueue.ParallelizeUntil(parallelizeContext, workerNum, len(nodeInfos), func(index int) {
 		nodeName := nodeInfos[index].Node().Name
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		s, status := taintToleration.Score(ctx, cycleState, pod, nodeName)
+		s, status := taintToleration.Score(parallelizeContext, cycleState, pod, nodeName)
 		if !status.IsSuccess() {
-			parallelizeCancel()
 			errCh <- fmt.Errorf("calculate taint toleration priority failed %v", status.Message())
 			return
 		}
@@ -479,13 +473,11 @@ func podTopologySpreadScore(
 	workerNum := 16
 	errCh := make(chan error, workerNum)
 	parallelizeContext, parallelizeCancel := context.WithCancel(ctx)
+	defer parallelizeCancel()
 	workqueue.ParallelizeUntil(parallelizeContext, workerNum, len(nodeInfos), func(index int) {
 		nodeName := nodeInfos[index].Node().Name
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		s, status := podTopologySpread.Score(ctx, cycleState, pod, nodeName)
+		s, status := podTopologySpread.Score(parallelizeContext, cycleState, pod, nodeName)
 		if !status.IsSuccess() {
-			parallelizeCancel()
 			errCh <- fmt.Errorf("calculate pod topology spread priority failed %v", status.Message())
 			return
 		}

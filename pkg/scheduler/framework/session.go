@@ -44,6 +44,11 @@ import (
 
 // Session information for the current session
 type Session struct {
+	// SessionContext is the context for the session
+	// created when each session is initialized
+	// and set to nil when the session is closed.
+	SessionContext context.Context
+
 	UID types.UID
 
 	kubeClient      kubernetes.Interface
@@ -51,7 +56,6 @@ type Session struct {
 	cache           cache.Cache
 	restConfig      *rest.Config
 	informerFactory informers.SharedInformerFactory
-	SessionContext  context.Context
 
 	TotalResource *api.Resource
 	// podGroupStatus cache podgroup status during schedule
@@ -561,6 +565,11 @@ func (ssn Session) ClientConfig() *rest.Config {
 // InformerFactory returns the scheduler ShareInformerFactory
 func (ssn Session) InformerFactory() informers.SharedInformerFactory {
 	return ssn.informerFactory
+}
+
+// Context returns the scheduler session context
+func (ssn *Session) Context() context.Context {
+	return ssn.SessionContext
 }
 
 // RecordPodGroupEvent records podGroup events
