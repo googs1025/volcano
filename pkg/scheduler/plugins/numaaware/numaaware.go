@@ -178,7 +178,7 @@ func (pp *numaPlugin) OnSessionOpen(ssn *framework.Session) {
 			return nodeScores, nil
 		}
 
-		scoreList := getNodeNumaNumForTask(nodeInfo, pp.assignRes[task.UID])
+		scoreList := getNodeNumaNumForTask(ssn.SessionContext, nodeInfo, pp.assignRes[task.UID])
 		util.NormalizeScore(api.DefaultMaxNodeScore, true, scoreList)
 
 		for idx, scoreNode := range scoreList {
@@ -235,9 +235,9 @@ func filterNodeByPolicy(task *api.TaskInfo, node *api.NodeInfo, nodeResSets map[
 	return true, nil
 }
 
-func getNodeNumaNumForTask(nodeInfo []*api.NodeInfo, resAssignMap map[string]api.ResNumaSets) []api.ScoredNode {
+func getNodeNumaNumForTask(ctx context.Context, nodeInfo []*api.NodeInfo, resAssignMap map[string]api.ResNumaSets) []api.ScoredNode {
 	nodeNumaCnts := make([]api.ScoredNode, len(nodeInfo))
-	workqueue.ParallelizeUntil(context.TODO(), 16, len(nodeInfo), func(index int) {
+	workqueue.ParallelizeUntil(ctx, 16, len(nodeInfo), func(index int) {
 		node := nodeInfo[index]
 		assignCpus := resAssignMap[node.Name][string(v1.ResourceCPU)]
 		nodeNumaCnts[index] = api.ScoredNode{

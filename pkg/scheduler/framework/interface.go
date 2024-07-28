@@ -18,7 +18,7 @@ package framework
 
 // Action is the interface of scheduler action.
 type Action interface {
-	// The unique name of Action.
+	// Name The unique name of Action.
 	Name() string
 
 	// Initialize initializes the allocator plugins.
@@ -33,9 +33,12 @@ type Action interface {
 
 // Plugin is the interface of scheduler plugin
 type Plugin interface {
-	// The unique name of Plugin.
+	// Name The unique name of Plugin.
 	Name() string
 
+	// OnSessionOpen
 	OnSessionOpen(ssn *Session)
+
+	// OnSessionClose
 	OnSessionClose(ssn *Session)
 }

@@ -17,6 +17,7 @@ limitations under the License.
 package framework
 
 import (
+	"context"
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
@@ -50,6 +51,7 @@ type Session struct {
 	cache           cache.Cache
 	restConfig      *rest.Config
 	informerFactory informers.SharedInformerFactory
+	SessionContext  context.Context
 
 	TotalResource *api.Resource
 	// podGroupStatus cache podgroup status during schedule
@@ -182,6 +184,12 @@ func openSession(cache cache.Cache) *Session {
 	ssn.RevocableNodes = snapshot.RevocableNodes
 	ssn.Queues = snapshot.Queues
 	ssn.NamespaceInfo = snapshot.NamespaceInfo
+
+	// initialize session context
+	if ssn.SessionContext == nil {
+		ssn.SessionContext = context.TODO()
+	}
+
 	// calculate all nodes' resource only once in each schedule cycle, other plugins can clone it when need
 	for _, n := range ssn.Nodes {
 		ssn.TotalResource.Add(n.Allocatable)
@@ -230,6 +238,7 @@ func closeSession(ssn *Session) {
 
 	updateQueueStatus(ssn)
 
+	ssn.SessionContext = nil
 	ssn.Jobs = nil
 	ssn.Nodes = nil
 	ssn.RevocableNodes = nil

@@ -48,7 +48,7 @@ func getPodTemplateUID(pod *v1.Pod) string {
 	return uid
 }
 
-// PredicateWithCache: check the predicate result existed in cache
+// PredicateWithCache check the predicate result existed in cache
 func (pc *predicateCache) PredicateWithCache(nodeName string, pod *v1.Pod) (bool, error) {
 	podTemplateUID := getPodTemplateUID(pod)
 	if podTemplateUID == "" {

@@ -297,34 +297,34 @@ func (pp *predicatesPlugin) OnSessionOpen(ssn *framework.Session) {
 	// TODO: Add more predicates, k8s.io/kubernetes/pkg/scheduler/framework/plugins/legacy_registry.go
 	handle := k8s.NewFrameworkHandle(nodeMap, ssn.KubeClient(), ssn.InformerFactory())
 	// 1. NodeUnschedulable
-	plugin, _ := nodeunschedulable.New(context.TODO(), nil, handle)
+	plugin, _ := nodeunschedulable.New(ssn.SessionContext, nil, handle)
 	nodeUnscheduleFilter := plugin.(*nodeunschedulable.NodeUnschedulable)
 	// 2. NodeAffinity
 	nodeAffinityArgs := config.NodeAffinityArgs{
 		AddedAffinity: &v1.NodeAffinity{},
 	}
-	plugin, _ = nodeaffinity.New(context.TODO(), &nodeAffinityArgs, handle)
+	plugin, _ = nodeaffinity.New(ssn.SessionContext, &nodeAffinityArgs, handle)
 	nodeAffinityFilter := plugin.(*nodeaffinity.NodeAffinity)
 	// 3. NodePorts
-	plugin, _ = nodeports.New(context.TODO(), nil, handle)
+	plugin, _ = nodeports.New(ssn.SessionContext, nil, handle)
 	nodePortFilter := plugin.(*nodeports.NodePorts)
 	// 4. TaintToleration
-	plugin, _ = tainttoleration.New(context.TODO(), nil, handle)
+	plugin, _ = tainttoleration.New(ssn.SessionContext, nil, handle)
 	tolerationFilter := plugin.(*tainttoleration.TaintToleration)
 	// 5. InterPodAffinity
 	plArgs := &config.InterPodAffinityArgs{}
-	plugin, _ = interpodaffinity.New(context.TODO(), plArgs, handle)
+	plugin, _ = interpodaffinity.New(ssn.SessionContext, plArgs, handle)
 	podAffinityFilter := plugin.(*interpodaffinity.InterPodAffinity)
 	// 6. NodeVolumeLimits
-	plugin, _ = nodevolumelimits.NewCSI(context.TODO(), nil, handle, features)
+	plugin, _ = nodevolumelimits.NewCSI(ssn.SessionContext, nil, handle, features)
 	nodeVolumeLimitsCSIFilter := plugin.(*nodevolumelimits.CSILimits)
 	// 7. VolumeZone
-	plugin, _ = volumezone.New(context.TODO(), nil, handle)
+	plugin, _ = volumezone.New(ssn.SessionContext, nil, handle)
 	volumeZoneFilter := plugin.(*volumezone.VolumeZone)
 	// 8. PodTopologySpread
 	// Setting cluster level default constraints is not support for now.
 	ptsArgs := &config.PodTopologySpreadArgs{DefaultingType: config.SystemDefaulting}
-	plugin, _ = podtopologyspread.New(context.TODO(), ptsArgs, handle, features)
+	plugin, _ = podtopologyspread.New(ssn.SessionContext, ptsArgs, handle, features)
 	podTopologySpreadFilter := plugin.(*podtopologyspread.PodTopologySpread)
 
 	state := k8sframework.NewCycleState()
@@ -333,7 +333,7 @@ func (pp *predicatesPlugin) OnSessionOpen(ssn *framework.Session) {
 	ssn.AddPrePredicateFn(pp.Name(), func(task *api.TaskInfo) error {
 		// Check NodePorts
 		if predicate.nodePortEnable {
-			_, status := nodePortFilter.PreFilter(context.TODO(), state, task.Pod)
+			_, status := nodePortFilter.PreFilter(ssn.SessionContext, state, task.Pod)
 			if err := handleSkipPrePredicatePlugin(status, task, skipPlugins, nodeports.Name); err != nil {
 				return err
 			}
@@ -350,7 +350,7 @@ func (pp *predicatesPlugin) OnSessionOpen(ssn *framework.Session) {
 		// If the filtering logic is added to the Prefile node in the Volumebinding package in the future,
 		// the processing logic needs to be added to the return value result.
 		if predicate.podAffinityEnable {
-			_, status := podAffinityFilter.PreFilter(context.TODO(), state, task.Pod)
+			_, status := podAffinityFilter.PreFilter(ssn.SessionContext, state, task.Pod)
 			if err := handleSkipPrePredicatePlugin(status, task, skipPlugins, interpodaffinity.Name); err != nil {
 				return err
 			}
@@ -367,7 +367,7 @@ func (pp *predicatesPlugin) OnSessionOpen(ssn *framework.Session) {
 		// If the filtering logic is added to the Prefile node in the Volumebinding package in the future,
 		// the processing logic needs to be added to the return value result.
 		if predicate.podTopologySpreadEnable {
-			_, status := podTopologySpreadFilter.PreFilter(context.TODO(), state, task.Pod)
+			_, status := podTopologySpreadFilter.PreFilter(ssn.SessionContext, state, task.Pod)
 			if err := handleSkipPrePredicatePlugin(status, task, skipPlugins, podTopologySpreadFilter.Name()); err != nil {
 				return err
 			}
@@ -395,7 +395,7 @@ func (pp *predicatesPlugin) OnSessionOpen(ssn *framework.Session) {
 		predicateByStablefilter := func(pod *v1.Pod, nodeInfo *k8sframework.NodeInfo) ([]*api.Status, bool, error) {
 			// CheckNodeUnschedulable
 			predicateStatus := make([]*api.Status, 0)
-			status := nodeUnscheduleFilter.Filter(context.TODO(), state, task.Pod, nodeInfo)
+			status := nodeUnscheduleFilter.Filter(ssn.SessionContext, state, task.Pod, nodeInfo)
 			nodeUnscheduleStatus := framework.ConvertPredicateStatus(status)
 			if nodeUnscheduleStatus.Code != api.Success {
 				predicateStatus = append(predicateStatus, nodeUnscheduleStatus)
@@ -404,7 +404,7 @@ func (pp *predicatesPlugin) OnSessionOpen(ssn *framework.Session) {
 
 			// Check NodeAffinity
 			if predicate.nodeAffinityEnable {
-				status := nodeAffinityFilter.Filter(context.TODO(), state, task.Pod, nodeInfo)
+				status := nodeAffinityFilter.Filter(ssn.SessionContext, state, task.Pod, nodeInfo)
 				nodeAffinityStatus := framework.ConvertPredicateStatus(status)
 				if nodeAffinityStatus.Code != api.Success {
 					predicateStatus = append(predicateStatus, nodeAffinityStatus)
@@ -414,7 +414,7 @@ func (pp *predicatesPlugin) OnSessionOpen(ssn *framework.Session) {
 
 			// PodToleratesNodeTaints: TaintToleration
 			if predicate.taintTolerationEnable {
-				status := tolerationFilter.Filter(context.TODO(), state, task.Pod, nodeInfo)
+				status := tolerationFilter.Filter(ssn.SessionContext, state, task.Pod, nodeInfo)
 				tolerationStatus := framework.ConvertPredicateStatus(status)
 				if tolerationStatus.Code != api.Success {
 					predicateStatus = append(predicateStatus, tolerationStatus)
@@ -452,7 +452,7 @@ func (pp *predicatesPlugin) OnSessionOpen(ssn *framework.Session) {
 		if predicate.nodePortEnable {
 			isSkipNodePorts := handleSkipPredicatePlugin(task, skipPlugins, nodePortFilter.Name(), node)
 			if !isSkipNodePorts {
-				status := nodePortFilter.Filter(context.TODO(), state, nil, nodeInfo)
+				status := nodePortFilter.Filter(ssn.SessionContext, state, nil, nodeInfo)
 				nodePortStatus := framework.ConvertPredicateStatus(status)
 				if nodePortStatus.Code != api.Success {
 					predicateStatus = append(predicateStatus, nodePortStatus)
@@ -465,7 +465,7 @@ func (pp *predicatesPlugin) OnSessionOpen(ssn *framework.Session) {
 		if predicate.podAffinityEnable {
 			isSkipInterPodAffinity := handleSkipPredicatePlugin(task, skipPlugins, podAffinityFilter.Name(), node)
 			if !isSkipInterPodAffinity {
-				status := podAffinityFilter.Filter(context.TODO(), state, task.Pod, nodeInfo)
+				status := podAffinityFilter.Filter(ssn.SessionContext, state, task.Pod, nodeInfo)
 				podAffinityStatus := framework.ConvertPredicateStatus(status)
 				if podAffinityStatus.Code != api.Success {
 					predicateStatus = append(predicateStatus, podAffinityStatus)
@@ -476,14 +476,14 @@ func (pp *predicatesPlugin) OnSessionOpen(ssn *framework.Session) {
 
 		// Check NodeVolumeLimits
 		if predicate.nodeVolumeLimitsEnable {
-			status := nodeVolumeLimitsCSIFilter.Filter(context.TODO(), state, task.Pod, nodeInfo)
+			status := nodeVolumeLimitsCSIFilter.Filter(ssn.SessionContext, state, task.Pod, nodeInfo)
 			nodeVolumeStatus := framework.ConvertPredicateStatus(status)
 			predicateStatus = append(predicateStatus, nodeVolumeStatus)
 		}
 
 		// Check VolumeZone
 		if predicate.volumeZoneEnable {
-			status := volumeZoneFilter.Filter(context.TODO(), state, task.Pod, nodeInfo)
+			status := volumeZoneFilter.Filter(ssn.SessionContext, state, task.Pod, nodeInfo)
 			volumeZoneStatus := framework.ConvertPredicateStatus(status)
 			if volumeZoneStatus.Code != api.Success {
 				predicateStatus = append(predicateStatus, volumeZoneStatus)
@@ -495,7 +495,7 @@ func (pp *predicatesPlugin) OnSessionOpen(ssn *framework.Session) {
 		if predicate.podTopologySpreadEnable {
 			isSkipPodTopologySpreadFilter := handleSkipPredicatePlugin(task, skipPlugins, podTopologySpreadFilter.Name(), node)
 			if !isSkipPodTopologySpreadFilter {
-				status := podTopologySpreadFilter.Filter(context.TODO(), state, task.Pod, nodeInfo)
+				status := podTopologySpreadFilter.Filter(ssn.SessionContext, state, task.Pod, nodeInfo)
 				podTopologyStatus := framework.ConvertPredicateStatus(status)
 				if podTopologyStatus.Code != api.Success {
 					predicateStatus = append(predicateStatus, podTopologyStatus)

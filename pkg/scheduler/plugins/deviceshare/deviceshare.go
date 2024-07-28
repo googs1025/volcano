@@ -150,7 +150,7 @@ func (dp *deviceSharePlugin) OnSessionOpen(ssn *framework.Session) {
 	ssn.AddNodeOrderFn(dp.Name(), func(task *api.TaskInfo, node *api.NodeInfo) (float64, error) {
 		// DeviceScore
 		if len(dp.schedulePolicy) > 0 {
-			score, status := getDeviceScore(context.TODO(), task.Pod, node, dp.schedulePolicy)
+			score, status := getDeviceScore(ssn.SessionContext, task.Pod, node, dp.schedulePolicy)
 			if !status.IsSuccess() {
 				klog.Warningf("Node: %s, Calculate Device Score Failed because of Error: %v", node.Name, status.AsError())
 				return 0, status.AsError()

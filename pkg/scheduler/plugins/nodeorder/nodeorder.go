@@ -176,7 +176,7 @@ func (pp *nodeOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 			Resources: []config.ResourceSpec{{Name: "cpu", Weight: 50}, {Name: "memory", Weight: 50}},
 		},
 	}
-	p, _ := noderesources.NewFit(context.TODO(), leastAllocatedArgs, handle, fts)
+	p, _ := noderesources.NewFit(ssn.SessionContext, leastAllocatedArgs, handle, fts)
 	leastAllocated := p.(*noderesources.Fit)
 
 	// 2. NodeResourcesMostAllocated
@@ -186,7 +186,7 @@ func (pp *nodeOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 			Resources: []config.ResourceSpec{{Name: "cpu", Weight: 1}, {Name: "memory", Weight: 1}},
 		},
 	}
-	p, _ = noderesources.NewFit(context.TODO(), mostAllocatedArgs, handle, fts)
+	p, _ = noderesources.NewFit(ssn.SessionContext, mostAllocatedArgs, handle, fts)
 	mostAllocation := p.(*noderesources.Fit)
 
 	// 3. NodeResourcesBalancedAllocation
@@ -197,18 +197,18 @@ func (pp *nodeOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 			{Name: "nvidia.com/gpu", Weight: 1},
 		},
 	}
-	p, _ = noderesources.NewBalancedAllocation(context.TODO(), blArgs, handle, fts)
+	p, _ = noderesources.NewBalancedAllocation(ssn.SessionContext, blArgs, handle, fts)
 	balancedAllocation := p.(*noderesources.BalancedAllocation)
 
 	// 4. NodeAffinity
 	naArgs := &config.NodeAffinityArgs{
 		AddedAffinity: &v1.NodeAffinity{},
 	}
-	p, _ = nodeaffinity.New(context.TODO(), naArgs, handle)
+	p, _ = nodeaffinity.New(ssn.SessionContext, naArgs, handle)
 	nodeAffinity := p.(*nodeaffinity.NodeAffinity)
 
 	// 5. ImageLocality
-	p, _ = imagelocality.New(context.TODO(), nil, handle)
+	p, _ = imagelocality.New(ssn.SessionContext, nil, handle)
 	imageLocality := p.(*imagelocality.ImageLocality)
 
 	nodeOrderFn := func(task *api.TaskInfo, node *api.NodeInfo) (float64, error) {
@@ -216,7 +216,7 @@ func (pp *nodeOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 
 		state := k8sframework.NewCycleState()
 		if weight.imageLocalityWeight != 0 {
-			score, status := imageLocality.Score(context.TODO(), state, task.Pod, node.Name)
+			score, status := imageLocality.Score(ssn.SessionContext, state, task.Pod, node.Name)
 			if !status.IsSuccess() {
 				klog.Warningf("Node: %s, Image Locality Priority Failed because of Error: %v", node.Name, status.AsError())
 				return 0, status.AsError()
@@ -229,7 +229,7 @@ func (pp *nodeOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 
 		// NodeResourcesLeastAllocated
 		if weight.leastReqWeight != 0 {
-			score, status := leastAllocated.Score(context.TODO(), state, task.Pod, node.Name)
+			score, status := leastAllocated.Score(ssn.SessionContext, state, task.Pod, node.Name)
 			if !status.IsSuccess() {
 				klog.Warningf("Node: %s, Least Allocated Priority Failed because of Error: %v", node.Name, status.AsError())
 				return 0, status.AsError()
@@ -242,7 +242,7 @@ func (pp *nodeOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 
 		// NodeResourcesMostAllocated
 		if weight.mostReqWeight != 0 {
-			score, status := mostAllocation.Score(context.TODO(), state, task.Pod, node.Name)
+			score, status := mostAllocation.Score(ssn.SessionContext, state, task.Pod, node.Name)
 			if !status.IsSuccess() {
 				klog.Warningf("Node: %s, Most Allocated Priority Failed because of Error: %v", node.Name, status.AsError())
 				return 0, status.AsError()
@@ -255,7 +255,7 @@ func (pp *nodeOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 
 		// NodeResourcesBalancedAllocation
 		if weight.balancedResourceWeight != 0 {
-			score, status := balancedAllocation.Score(context.TODO(), state, task.Pod, node.Name)
+			score, status := balancedAllocation.Score(ssn.SessionContext, state, task.Pod, node.Name)
 			if !status.IsSuccess() {
 				klog.Warningf("Node: %s, Balanced Resource Allocation Priority Failed because of Error: %v", node.Name, status.AsError())
 				return 0, status.AsError()
@@ -268,7 +268,7 @@ func (pp *nodeOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 
 		// NodeAffinity
 		if weight.nodeAffinityWeight != 0 {
-			score, status := nodeAffinity.Score(context.TODO(), state, task.Pod, node.Name)
+			score, status := nodeAffinity.Score(ssn.SessionContext, state, task.Pod, node.Name)
 			if !status.IsSuccess() {
 				klog.Warningf("Node: %s, Calculate Node Affinity Priority Failed because of Error: %v", node.Name, status.AsError())
 				return 0, status.AsError()
@@ -286,16 +286,16 @@ func (pp *nodeOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 	ssn.AddNodeOrderFn(pp.Name(), nodeOrderFn)
 
 	plArgs := &config.InterPodAffinityArgs{}
-	p, _ = interpodaffinity.New(context.TODO(), plArgs, handle)
+	p, _ = interpodaffinity.New(ssn.SessionContext, plArgs, handle)
 	interPodAffinity := p.(*interpodaffinity.InterPodAffinity)
 
-	p, _ = tainttoleration.New(context.TODO(), nil, handle)
+	p, _ = tainttoleration.New(ssn.SessionContext, nil, handle)
 	taintToleration := p.(*tainttoleration.TaintToleration)
 
 	ptsArgs := &config.PodTopologySpreadArgs{
 		DefaultingType: config.SystemDefaulting,
 	}
-	p, _ = podtopologyspread.New(context.TODO(), ptsArgs, handle, fts)
+	p, _ = podtopologyspread.New(ssn.SessionContext, ptsArgs, handle, fts)
 	podTopologySpread := p.(*podtopologyspread.PodTopologySpread)
 
 	batchNodeOrderFn := func(task *api.TaskInfo, nodeInfo []*api.NodeInfo) (map[string]float64, error) {
@@ -311,17 +311,17 @@ func (pp *nodeOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 		}
 		nodeScores := make(map[string]float64, len(nodes))
 
-		podAffinityScores, podErr := interPodAffinityScore(interPodAffinity, state, task.Pod, nodeInfos, weight.podAffinityWeight)
+		podAffinityScores, podErr := interPodAffinityScore(ssn.SessionContext, interPodAffinity, state, task.Pod, nodeInfos, weight.podAffinityWeight)
 		if podErr != nil {
 			return nil, podErr
 		}
 
-		nodeTolerationScores, err := taintTolerationScore(taintToleration, state, task.Pod, nodeInfos, weight.taintTolerationWeight)
+		nodeTolerationScores, err := taintTolerationScore(ssn.SessionContext, taintToleration, state, task.Pod, nodeInfos, weight.taintTolerationWeight)
 		if err != nil {
 			return nil, err
 		}
 
-		podTopologySpreadScores, err := podTopologySpreadScore(podTopologySpread, state, task.Pod, nodeInfos, weight.podTopologySpreadWeight)
+		podTopologySpreadScores, err := podTopologySpreadScore(ssn.SessionContext, podTopologySpread, state, task.Pod, nodeInfos, weight.podTopologySpreadWeight)
 		if err != nil {
 			return nil, err
 		}
@@ -337,13 +337,14 @@ func (pp *nodeOrderPlugin) OnSessionOpen(ssn *framework.Session) {
 }
 
 func interPodAffinityScore(
+	ctx context.Context,
 	interPodAffinity *interpodaffinity.InterPodAffinity,
 	state *k8sframework.CycleState,
 	pod *v1.Pod,
 	nodeInfos []*k8sframework.NodeInfo,
 	podAffinityWeight int,
 ) (map[string]float64, error) {
-	preScoreStatus := interPodAffinity.PreScore(context.TODO(), state, pod, nodeInfos)
+	preScoreStatus := interPodAffinity.PreScore(ctx, state, pod, nodeInfos)
 	if !preScoreStatus.IsSuccess() {
 		return nil, preScoreStatus.AsError()
 	}
@@ -359,7 +360,7 @@ func interPodAffinityScore(
 	// note that, in such case, size of errCh should be no less than parallelization number
 	workerNum := 16
 	errCh := make(chan error, workerNum)
-	parallelizeContext, parallelizeCancel := context.WithCancel(context.TODO())
+	parallelizeContext, parallelizeCancel := context.WithCancel(ctx)
 	defer parallelizeCancel()
 
 	workqueue.ParallelizeUntil(parallelizeContext, workerNum, len(nodeInfos), func(index int) {
@@ -384,7 +385,7 @@ func interPodAffinityScore(
 	default:
 	}
 
-	interPodAffinity.NormalizeScore(context.TODO(), state, pod, nodeScoreList)
+	interPodAffinity.NormalizeScore(ctx, state, pod, nodeScoreList)
 
 	nodeScores := make(map[string]float64, len(nodeInfos))
 	for i, nodeScore := range nodeScoreList {
@@ -402,13 +403,14 @@ func interPodAffinityScore(
 }
 
 func taintTolerationScore(
+	ctx context.Context,
 	taintToleration *tainttoleration.TaintToleration,
 	cycleState *k8sframework.CycleState,
 	pod *v1.Pod,
 	nodeInfos []*k8sframework.NodeInfo,
 	taintTolerationWeight int,
 ) (map[string]float64, error) {
-	preScoreStatus := taintToleration.PreScore(context.TODO(), cycleState, pod, nodeInfos)
+	preScoreStatus := taintToleration.PreScore(ctx, cycleState, pod, nodeInfos)
 	if !preScoreStatus.IsSuccess() {
 		return nil, preScoreStatus.AsError()
 	}
@@ -417,7 +419,7 @@ func taintTolerationScore(
 	// size of errCh should be no less than parallelization number, see interPodAffinityScore.
 	workerNum := 16
 	errCh := make(chan error, workerNum)
-	parallelizeContext, parallelizeCancel := context.WithCancel(context.TODO())
+	parallelizeContext, parallelizeCancel := context.WithCancel(ctx)
 	defer parallelizeCancel()
 
 	workqueue.ParallelizeUntil(parallelizeContext, workerNum, len(nodeInfos), func(index int) {
@@ -442,7 +444,7 @@ func taintTolerationScore(
 	default:
 	}
 
-	taintToleration.NormalizeScore(context.TODO(), cycleState, pod, nodeScoreList)
+	taintToleration.NormalizeScore(ctx, cycleState, pod, nodeScoreList)
 
 	nodeScores := make(map[string]float64, len(nodeInfos))
 	for i, nodeScore := range nodeScoreList {
@@ -460,13 +462,14 @@ func taintTolerationScore(
 }
 
 func podTopologySpreadScore(
+	ctx context.Context,
 	podTopologySpread *podtopologyspread.PodTopologySpread,
 	cycleState *k8sframework.CycleState,
 	pod *v1.Pod,
 	nodeInfos []*k8sframework.NodeInfo,
 	podTopologySpreadWeight int,
 ) (map[string]float64, error) {
-	preScoreStatus := podTopologySpread.PreScore(context.TODO(), cycleState, pod, nodeInfos)
+	preScoreStatus := podTopologySpread.PreScore(ctx, cycleState, pod, nodeInfos)
 	if !preScoreStatus.IsSuccess() {
 		return nil, preScoreStatus.AsError()
 	}
@@ -475,7 +478,7 @@ func podTopologySpreadScore(
 	// size of errCh should be no less than parallelization number, see interPodAffinityScore.
 	workerNum := 16
 	errCh := make(chan error, workerNum)
-	parallelizeContext, parallelizeCancel := context.WithCancel(context.TODO())
+	parallelizeContext, parallelizeCancel := context.WithCancel(ctx)
 	workqueue.ParallelizeUntil(parallelizeContext, workerNum, len(nodeInfos), func(index int) {
 		nodeName := nodeInfos[index].Node().Name
 		ctx, cancel := context.WithCancel(context.Background())
@@ -498,7 +501,7 @@ func podTopologySpreadScore(
 	default:
 	}
 
-	podTopologySpread.NormalizeScore(context.TODO(), cycleState, pod, nodeScoreList)
+	podTopologySpread.NormalizeScore(ctx, cycleState, pod, nodeScoreList)
 
 	nodeScores := make(map[string]float64, len(nodeInfos))
 	for i, nodeScore := range nodeScoreList {
