@@ -38,8 +38,8 @@ func TestEnqueue(t *testing.T) {
 				util.BuildPod("c1", "p2", "", v1.PodPending, api.BuildResourceList("1", "1G"), "pg1", make(map[string]string), make(map[string]string)),
 			},
 			Queues: []*schedulingv1.Queue{
-				util.BuildQueue("c1", 1, api.BuildResourceList("4", "4G")),
-				util.BuildQueue("c2", 1, api.BuildResourceList("4", "4G")),
+				util.MakeQueue("c1").Weight(1).Capability(api.BuildResourceList("4", "4Gi")).Obj(),
+				util.MakeQueue("c2").Weight(1).Capability(api.BuildResourceList("4", "4Gi")).Obj(),
 			},
 			ExpectStatus: map[api.JobID]scheduling.PodGroupPhase{
 				"c1/pg1": scheduling.PodGroupInqueue,
@@ -58,8 +58,8 @@ func TestEnqueue(t *testing.T) {
 				util.BuildPod("c1", "p2", "", v1.PodPending, api.BuildResourceList("1", "1G"), "pg2", make(map[string]string), make(map[string]string)),
 			},
 			Queues: []*schedulingv1.Queue{
-				util.BuildQueue("c1", 1, api.BuildResourceList("4", "4G")),
-				util.BuildQueue("c2", 1, api.BuildResourceList("4", "4G")),
+				util.MakeQueue("c1").Weight(1).Capability(api.BuildResourceList("4", "4Gi")).Obj(),
+				util.MakeQueue("c2").Weight(1).Capability(api.BuildResourceList("4", "4Gi")).Obj(),
 			},
 			ExpectStatus: map[api.JobID]scheduling.PodGroupPhase{
 				"c1/pg1": scheduling.PodGroupInqueue,
@@ -76,7 +76,7 @@ func TestEnqueue(t *testing.T) {
 				util.BuildPod("c1", "p2", "", v1.PodRunning, api.BuildResourceList("1", "1G"), "pg1", make(map[string]string), make(map[string]string)),
 			},
 			Queues: []*schedulingv1.Queue{
-				util.BuildQueue("c1", 1, api.BuildResourceList("4", "4G")),
+				util.MakeQueue("c1").Weight(1).Capability(api.BuildResourceList("4", "4Gi")).Obj(),
 			},
 			ExpectStatus: map[api.JobID]scheduling.PodGroupPhase{
 				"c1/pg1": scheduling.PodGroupRunning,
@@ -88,7 +88,7 @@ func TestEnqueue(t *testing.T) {
 				util.BuildPodGroup("pg1", "c1", "c1", 0, nil, schedulingv1.PodGroupPending),
 			},
 			Queues: []*schedulingv1.Queue{
-				util.BuildQueue("c2", 1, api.BuildResourceList("4", "4G")),
+				util.MakeQueue("c2").Weight(1).Capability(api.BuildResourceList("4", "4Gi")).Obj(),
 			},
 			ExpectStatus: map[api.JobID]scheduling.PodGroupPhase{},
 		},
@@ -99,7 +99,7 @@ func TestEnqueue(t *testing.T) {
 					nil, api.BuildResourceList("8", "8G"), schedulingv1.PodGroupPending),
 			},
 			Queues: []*schedulingv1.Queue{
-				util.BuildQueue("c1", 1, api.BuildResourceList("1", "1G")),
+				util.MakeQueue("c1").Weight(1).Capability(api.BuildResourceList("1", "1Gi")).Obj(),
 			},
 			ExpectStatus: map[api.JobID]scheduling.PodGroupPhase{
 				"c1/pg1": scheduling.PodGroupPending,

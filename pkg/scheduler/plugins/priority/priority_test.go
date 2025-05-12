@@ -79,8 +79,8 @@ func TestPreempt(t *testing.T) {
 				Name:    "enable preempt low priority: enablePreemptable:true",
 				Plugins: plugins,
 				PriClass: []*schedulingv1.PriorityClass{
-					util.BuildPriorityClass("low-priority", 100),
-					util.BuildPriorityClass("high-priority", 1000),
+					util.MakePriorityClass("low-priority").Value(100).Obj(),
+					util.MakePriorityClass("high-priority").Value(1000).Obj(),
 				},
 				PodGroups: []*vcapisv1.PodGroup{
 					util.BuildPodGroupWithPrio("pg1", "ns1", "q1", 1, map[string]int32{}, vcapisv1.PodGroupInqueue, "low-priority"),
@@ -92,11 +92,17 @@ func TestPreempt(t *testing.T) {
 					util.BuildPod("ns2", "preemptor1", "", v1.PodPending, api.BuildResourceList("3", "3G"), "pg2", make(map[string]string), make(map[string]string)),
 				},
 				Nodes: []*v1.Node{
-					util.BuildNode("node1", api.BuildResourceList("6", "6G", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string)),
-					util.BuildNode("node2", api.BuildResourceList("2", "2G", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string)),
+					util.MakeNode("node1").
+						Allocatable(api.BuildResourceList("6", "6Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+						Capacity(api.BuildResourceList("6", "6Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+						Obj(),
+					util.MakeNode("node2").
+						Allocatable(api.BuildResourceList("2", "2Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+						Capacity(api.BuildResourceList("2", "2Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+						Obj(),
 				},
 				Queues: []*vcapisv1.Queue{
-					util.BuildQueue("q1", 1, api.BuildResourceList("6", "6G")),
+					util.MakeQueue("q1").Weight(1).Capability(api.BuildResourceList("6", "6Gi")).Obj(),
 				},
 				ExpectEvicted:   []string{"ns1/preemptee1"},
 				ExpectEvictNum:  1,
@@ -114,8 +120,8 @@ func TestPreempt(t *testing.T) {
 				Name:    "disable preempt low priority: enablePreemptable:false",
 				Plugins: plugins,
 				PriClass: []*schedulingv1.PriorityClass{
-					util.BuildPriorityClass("low-priority", 100),
-					util.BuildPriorityClass("high-priority", 1000),
+					util.MakePriorityClass("low-priority").Value(100).Obj(),
+					util.MakePriorityClass("high-priority").Value(1000).Obj(),
 				},
 				PodGroups: []*vcapisv1.PodGroup{
 					util.BuildPodGroupWithPrio("pg1", "ns1", "q1", 1, map[string]int32{}, vcapisv1.PodGroupInqueue, "low-priority"),
@@ -127,11 +133,17 @@ func TestPreempt(t *testing.T) {
 					util.BuildPod("ns2", "preemptor1", "", v1.PodPending, api.BuildResourceList("3", "3G"), "pg2", make(map[string]string), make(map[string]string)),
 				},
 				Nodes: []*v1.Node{
-					util.BuildNode("node1", api.BuildResourceList("3", "3G", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string)),
-					util.BuildNode("node2", api.BuildResourceList("3", "3G", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string)),
+					util.MakeNode("node1").
+						Allocatable(api.BuildResourceList("3", "3Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+						Capacity(api.BuildResourceList("3", "3Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+						Obj(),
+					util.MakeNode("node2").
+						Allocatable(api.BuildResourceList("3", "3Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+						Capacity(api.BuildResourceList("3", "3Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+						Obj(),
 				},
 				Queues: []*vcapisv1.Queue{
-					util.BuildQueue("q1", 1, api.BuildResourceList("6", "6G")),
+					util.MakeQueue("q1").Weight(1).Capability(api.BuildResourceList("6", "6Gi")).Obj(),
 				},
 				ExpectEvicted:   []string{},
 				ExpectEvictNum:  0,

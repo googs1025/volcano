@@ -38,19 +38,207 @@ import (
 	volumescheduling "volcano.sh/volcano/pkg/scheduler/capabilities/volumebinding"
 )
 
-// BuildNode builts node object
-func BuildNode(name string, alloc v1.ResourceList, labels map[string]string) *v1.Node {
-	return &v1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Labels:      labels,
-			Annotations: map[string]string{},
-		},
-		Status: v1.NodeStatus{
-			Capacity:    alloc,
-			Allocatable: alloc,
+// NodeWrapper wraps a Kubernetes Node.
+type NodeWrapper struct {
+	v1.Node
+}
+
+// MakeNode creates a new NodeWrapper with the specified name.
+func MakeNode(name string) *NodeWrapper {
+	return &NodeWrapper{
+		Node: v1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        name,
+				Labels:      map[string]string{},
+				Annotations: map[string]string{},
+			},
+			Status: v1.NodeStatus{},
 		},
 	}
+}
+
+// Annotations sets the annotations of the node.
+func (n *NodeWrapper) Annotations(annotations map[string]string) *NodeWrapper {
+	n.ObjectMeta.Annotations = annotations
+	return n
+}
+
+// Labels updates the labels of the node.
+func (n *NodeWrapper) Labels(labels map[string]string) *NodeWrapper {
+	n.ObjectMeta.Labels = labels
+	return n
+}
+
+// Capacity sets the capacity of the node.
+func (n *NodeWrapper) Capacity(capacity v1.ResourceList) *NodeWrapper {
+	n.Status.Capacity = capacity
+	return n
+}
+
+// Allocatable sets the allocatable resources of the node.
+func (n *NodeWrapper) Allocatable(allocatable v1.ResourceList) *NodeWrapper {
+	n.Status.Allocatable = allocatable
+	return n
+}
+
+// Obj returns the inner Node.
+func (n *NodeWrapper) Obj() *v1.Node {
+	return &n.Node
+}
+
+// ContainerWrapper helps in building a Kubernetes container.
+type ContainerWrapper struct {
+	v1.Container
+}
+
+// NewContainer creates a new ContainerWrapper.
+func NewContainer(name, image string) *ContainerWrapper {
+	return &ContainerWrapper{
+		Container: v1.Container{
+			Name:  name,
+			Image: image,
+		},
+	}
+}
+
+// Requests sets the resource requests for the container using a ResourceList.
+func (c *ContainerWrapper) Requests(req v1.ResourceList) *ContainerWrapper {
+	c.Resources.Requests = req
+	return c
+}
+
+// Limits sets the resource limits for the container using a ResourceList.
+func (c *ContainerWrapper) Limits(lim v1.ResourceList) *ContainerWrapper {
+	c.Resources.Limits = lim
+	return c
+}
+
+// Obj returns the inner Container.
+func (c *ContainerWrapper) Obj() *v1.Container {
+	return &c.Container
+}
+
+// PodWrapper wraps a Kubernetes Pod.
+type PodWrapper struct {
+	v1.Pod
+}
+
+// MakePod creates a new PodWrapper with the specified parameters.
+func MakePod(namespace, name string) *PodWrapper {
+	return &PodWrapper{
+		Pod: v1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				UID:         types.UID(fmt.Sprintf("%v-%v", namespace, name)),
+				Name:        name,
+				Namespace:   namespace,
+				Labels:      map[string]string{},
+				Annotations: map[string]string{},
+			},
+			Spec:   v1.PodSpec{},
+			Status: v1.PodStatus{},
+		},
+	}
+}
+
+// Annotations sets the annotations of the pod.
+func (p *PodWrapper) Annotations(annotations map[string]string) *PodWrapper {
+	p.ObjectMeta.Annotations = annotations
+	return p
+}
+
+// Labels updates the labels of the pod.
+func (p *PodWrapper) Labels(labels map[string]string) *PodWrapper {
+	p.ObjectMeta.Labels = labels
+	return p
+}
+
+// NodeName sets the nodeName of the pod.
+func (p *PodWrapper) NodeName(nodeName string) *PodWrapper {
+	p.Spec.NodeName = nodeName
+	return p
+}
+
+// NodeSelector sets the nodeSelector of the pod.
+func (p *PodWrapper) NodeSelector(selector map[string]string) *PodWrapper {
+	p.Spec.NodeSelector = selector
+	return p
+}
+
+// Containers adds or replaces containers in the pod spec.
+func (p *PodWrapper) Containers(containers []v1.Container) *PodWrapper {
+	p.Spec.Containers = containers
+	return p
+}
+
+// Priority adds the priority of the pod.
+func (p *PodWrapper) Priority(priority *int32) *PodWrapper {
+	p.Spec.Priority = priority
+	return p
+}
+
+func (p *PodWrapper) PreemptionPolicy(preemptionPolicy v1.PreemptionPolicy) *PodWrapper {
+	p.Spec.PreemptionPolicy = &preemptionPolicy
+	return p
+}
+
+// Phase add the phase of the pod.
+func (p *PodWrapper) Phase(phase v1.PodPhase) *PodWrapper {
+	p.Status.Phase = phase
+	return p
+}
+
+// PVC adds a PersistentVolumeClaim to the pod's volumes and mounts it in specified containers.
+func (p *PodWrapper) PVC(pvc *v1.PersistentVolumeClaim, mountContainers ...string) *PodWrapper {
+	if p.Spec.Volumes == nil {
+		p.Spec.Volumes = make([]v1.Volume, 0)
+	}
+
+	newVolume := v1.Volume{
+		Name: pvc.Name,
+		VolumeSource: v1.VolumeSource{
+			PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
+				ClaimName: pvc.Name,
+			},
+		},
+	}
+
+	exists := false
+	for _, volume := range p.Spec.Volumes {
+		if volume.Name == newVolume.Name {
+			exists = true
+			break
+		}
+	}
+
+	if !exists {
+		p.Spec.Volumes = append(p.Spec.Volumes, newVolume)
+	}
+
+	for i, container := range p.Spec.Containers {
+		if len(mountContainers) == 0 || containsString(mountContainers, container.Name) {
+			p.Spec.Containers[i].VolumeMounts = append(container.VolumeMounts, v1.VolumeMount{
+				Name:      pvc.Name,
+				MountPath: "/data",
+			})
+		}
+	}
+
+	return p
+}
+
+// help function to check if a string exists in a slice
+func containsString(slice []string, s string) bool {
+	for _, item := range slice {
+		if item == s {
+			return true
+		}
+	}
+	return false
+}
+
+// Obj returns the inner Pod.
+func (p *PodWrapper) Obj() *v1.Pod {
+	return &p.Pod
 }
 
 // BuildPod builds a Burstable pod object
@@ -197,6 +385,92 @@ func BuildPodWithPreeemptionPolicy(namespace, name, nodeName string, p v1.PodPha
 	return pod
 }
 
+// PodGroupWrapper wraps a PodGroup for fluent construction.
+type PodGroupWrapper struct {
+	*schedulingv1beta1.PodGroup
+}
+
+// MakePodGroup creates a new PodGroupWrapper with the given name and namespace.
+func MakePodGroup(name, ns string) *PodGroupWrapper {
+	return &PodGroupWrapper{
+		PodGroup: &schedulingv1beta1.PodGroup{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: ns,
+			},
+			Spec: schedulingv1beta1.PodGroupSpec{},
+			Status: schedulingv1beta1.PodGroupStatus{
+				Phase: schedulingv1beta1.PodGroupPending,
+			},
+		},
+	}
+}
+
+// Queue sets the queue of the podgroup.
+func (p *PodGroupWrapper) Queue(queue string) *PodGroupWrapper {
+	p.Spec.Queue = queue
+	return p
+}
+
+// MinMember sets the minimum number of members required in the podgroup.
+func (p *PodGroupWrapper) MinMember(min int32) *PodGroupWrapper {
+	p.Spec.MinMember = min
+	return p
+}
+
+// MinResources sets the minimal resources required for the podgroup.
+func (p *PodGroupWrapper) MinResources(res v1.ResourceList) *PodGroupWrapper {
+	if res == nil {
+		return p
+	}
+	resCopy := make(v1.ResourceList)
+	for k, v := range res {
+		resCopy[k] = v.DeepCopy()
+	}
+	p.Spec.MinResources = &resCopy
+	return p
+}
+
+// PriorityClassName sets the priority class name for the podgroup.
+func (p *PodGroupWrapper) PriorityClassName(name string) *PodGroupWrapper {
+	p.Spec.PriorityClassName = name
+	return p
+}
+
+// Annotations sets annotations on the podgroup.
+func (p *PodGroupWrapper) Annotations(annos map[string]string) *PodGroupWrapper {
+	if p.ObjectMeta.Annotations == nil {
+		p.ObjectMeta.Annotations = make(map[string]string)
+	}
+	for k, v := range annos {
+		p.ObjectMeta.Annotations[k] = v
+	}
+	return p
+}
+
+// Phase sets the phase of the podgroup status.
+func (p *PodGroupWrapper) Phase(phase schedulingv1beta1.PodGroupPhase) *PodGroupWrapper {
+	p.Status.Phase = phase
+	return p
+}
+
+// TaskMinMember sets the task-level minimum member requirements.
+func (p *PodGroupWrapper) TaskMinMember(taskMinMember map[string]int32) *PodGroupWrapper {
+	if taskMinMember == nil {
+		return p
+	}
+	p.Spec.MinTaskMember = make(map[string]int32)
+	for k, v := range taskMinMember {
+		p.Spec.MinTaskMember[k] = v
+	}
+	return p
+}
+
+// Obj returns the raw PodGroup object.
+func (p *PodGroupWrapper) Obj() *schedulingv1beta1.PodGroup {
+	return p.PodGroup
+}
+
 // BuildPodGroup return podgroup with base spec and phase status
 func BuildPodGroup(name, ns, queue string, minMember int32, taskMinMember map[string]int32, status schedulingv1beta1.PodGroupPhase) *schedulingv1beta1.PodGroup {
 	return &schedulingv1beta1.PodGroup{
@@ -234,19 +508,32 @@ func BuildPodGroupWithMinResources(name, ns, queue string, minMember int32, task
 	}
 }
 
-func BuildResourceQuota(name, ns string, hard v1.ResourceList) *v1.ResourceQuota {
-	return &v1.ResourceQuota{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
-		},
-		Spec: v1.ResourceQuotaSpec{
-			Hard: hard,
-		},
-		Status: v1.ResourceQuotaStatus{
-			Hard: hard,
+// ResourceQuotaWrapper wraps a ResourceQuota for fluent construction.
+type ResourceQuotaWrapper struct {
+	*v1.ResourceQuota
+}
+
+func MakeResourceQuota(name, ns string) *ResourceQuotaWrapper {
+	return &ResourceQuotaWrapper{
+		ResourceQuota: &v1.ResourceQuota{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: ns,
+			},
+			Spec:   v1.ResourceQuotaSpec{},
+			Status: v1.ResourceQuotaStatus{},
 		},
 	}
+}
+
+func (r *ResourceQuotaWrapper) Hard(hard v1.ResourceList) *ResourceQuotaWrapper {
+	r.Spec.Hard = hard
+	r.Status.Hard = hard
+	return r
+}
+
+func (r *ResourceQuotaWrapper) Obj() *v1.ResourceQuota {
+	return r.ResourceQuota
 }
 
 // BuildPodGroupWithPrio return podgroup with podgroup PriorityClassName
@@ -263,59 +550,114 @@ func BuildPodGroupWithAnno(name, ns, queue string, minMember int32, taskMinMembe
 	return pg
 }
 
-///////////// function to build queue  ///////////////////
+// QueueWrapper wraps a schedulingv1beta1.Queue for fluent construction.
+type QueueWrapper struct {
+	*schedulingv1beta1.Queue
+}
 
-// BuildQueue return a scheduling Queue
-func BuildQueue(qname string, weight int32, cap v1.ResourceList) *schedulingv1beta1.Queue {
-	return &schedulingv1beta1.Queue{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: qname,
-		},
-		Spec: schedulingv1beta1.QueueSpec{
-			Weight:     weight,
-			Capability: cap,
+// MakeQueue creates a new QueueWrapper with the given name and default fields.
+func MakeQueue(name string) *QueueWrapper {
+	return &QueueWrapper{
+		Queue: &schedulingv1beta1.Queue{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+			},
+			Spec: schedulingv1beta1.QueueSpec{
+				Weight: 1, // default
+			},
 		},
 	}
 }
 
-// BuildQueueWithAnnos return a Queue with annotations
-func BuildQueueWithAnnos(qname string, weight int32, cap v1.ResourceList, annos map[string]string) *schedulingv1beta1.Queue {
-	queue := BuildQueue(qname, weight, cap)
-	queue.ObjectMeta.Annotations = annos
-	return queue
+// Weight sets the weight of the queue.
+func (q *QueueWrapper) Weight(w int32) *QueueWrapper {
+	q.Spec.Weight = w
+	return q
 }
 
-// BuildQueueWithResourcesQuantity return a queue with deserved and capability resources quantity.
-func BuildQueueWithResourcesQuantity(qname string, deserved, cap v1.ResourceList) *schedulingv1beta1.Queue {
-	queue := BuildQueue(qname, 1, cap)
-	queue.Spec.Deserved = deserved
-	return queue
+// Capability sets the resource capability of the queue.
+func (q *QueueWrapper) Capability(cap v1.ResourceList) *QueueWrapper {
+	if cap == nil {
+		return q
+	}
+	copied := make(v1.ResourceList)
+	for k, v := range cap {
+		copied[k] = v.DeepCopy()
+	}
+	q.Spec.Capability = copied
+	return q
 }
 
-// BuildQueueWithPriorityAndResourcesQuantity return a queue with priority, deserved and capability resources quantity.
-func BuildQueueWithPriorityAndResourcesQuantity(qname string, priority int32, deserved, cap v1.ResourceList) *schedulingv1beta1.Queue {
-	queue := BuildQueue(qname, 1, cap)
-	queue.Spec.Deserved = deserved
-	queue.Spec.Priority = priority
-	return queue
+// Deserved sets the deserving resources of the queue.
+func (q *QueueWrapper) Deserved(deserved v1.ResourceList) *QueueWrapper {
+	if deserved == nil {
+		return q
+	}
+	copied := make(v1.ResourceList)
+	for k, v := range deserved {
+		copied[k] = v.DeepCopy()
+	}
+	q.Spec.Deserved = copied
+	return q
 }
 
-// ////// build in resource //////
-// BuildPriorityClass return pc
-func BuildPriorityClass(name string, value int32) *schedulingv1.PriorityClass {
-	return &schedulingv1.PriorityClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+// Priority sets the priority of the queue.
+func (q *QueueWrapper) Priority(priority int32) *QueueWrapper {
+	q.Spec.Priority = priority
+	return q
+}
+
+func (q *QueueWrapper) Parent(parent string) *QueueWrapper {
+	q.Spec.Parent = parent
+	return q
+}
+
+// Annotations adds annotations to the queue object metadata.
+func (q *QueueWrapper) Annotations(annos map[string]string) *QueueWrapper {
+	if q.ObjectMeta.Annotations == nil {
+		q.ObjectMeta.Annotations = make(map[string]string)
+	}
+	for k, v := range annos {
+		q.ObjectMeta.Annotations[k] = v
+	}
+	return q
+}
+
+// Obj returns the raw Queue object.
+func (q *QueueWrapper) Obj() *schedulingv1beta1.Queue {
+	return q.Queue
+}
+
+// PriorityClassWrapper wraps a schedulingv1.PriorityClass for fluent construction.
+type PriorityClassWrapper struct {
+	priorityClass *schedulingv1.PriorityClass
+}
+
+// MakePriorityClass creates a new PriorityClassWrapper.
+func MakePriorityClass(name string) *PriorityClassWrapper {
+	return &PriorityClassWrapper{
+		priorityClass: &schedulingv1.PriorityClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+			},
 		},
-		Value: value,
 	}
 }
 
-// BuildPriorityClassWithPreemptionPolicy return a priorityClass with value and preemptionPolicy
-func BuildPriorityClassWithPreemptionPolicy(name string, value int32, preemptionPolicy v1.PreemptionPolicy) *schedulingv1.PriorityClass {
-	pc := BuildPriorityClass(name, value)
-	pc.PreemptionPolicy = &preemptionPolicy
-	return pc
+// PreemptionPolicy sets the preemption policy for the priority class.
+func (p *PriorityClassWrapper) PreemptionPolicy(policy v1.PreemptionPolicy) *PriorityClassWrapper {
+	p.priorityClass.PreemptionPolicy = &policy
+	return p
+}
+
+func (p *PriorityClassWrapper) Value(value int32) *PriorityClassWrapper {
+	p.priorityClass.Value = value
+	return p
+}
+
+// Obj returns the raw PriorityClass object.
+func (p *PriorityClassWrapper) Obj() *schedulingv1.PriorityClass {
+	return p.priorityClass
 }
 
 // FakeBinder is used as fake binder
@@ -352,7 +694,7 @@ func (fb *FakeBinder) Length() int {
 }
 
 // Bind used by fake binder struct to bind pods
-func (fb *FakeBinder) Bind(kubeClient kubernetes.Interface, tasks []*api.TaskInfo) map[api.TaskID]string {
+func (fb *FakeBinder) Bind(_ kubernetes.Interface, tasks []*api.TaskInfo) map[api.TaskID]string {
 	fb.Lock()
 	defer fb.Unlock()
 	for _, p := range tasks {
@@ -360,7 +702,6 @@ func (fb *FakeBinder) Bind(kubeClient kubernetes.Interface, tasks []*api.TaskInf
 		fb.binds[key] = p.NodeName
 		fb.Channel <- key // need to wait binding pod because Bind process is asynchronous
 	}
-
 	return nil
 }
 
@@ -401,9 +742,7 @@ func (fe *FakeEvictor) Evict(p *v1.Pod, reason string) error {
 	fmt.Println("PodName: ", p.Name)
 	key := fmt.Sprintf("%v/%v", p.Namespace, p.Name)
 	fe.evicts = append(fe.evicts, key)
-
 	fe.Channel <- key
-
 	return nil
 }
 

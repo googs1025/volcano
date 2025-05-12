@@ -16,8 +16,14 @@ import (
 )
 
 func TestOvercommitPlugin(t *testing.T) {
-	n1 := util.BuildNode("n1", api.BuildResourceList("2", "4Gi"), make(map[string]string))
-	n2 := util.BuildNode("n2", api.BuildResourceList("4", "16Gi"), make(map[string]string))
+	n1 := util.MakeNode("n1").
+		Allocatable(api.BuildResourceList("2", "4Gi")).
+		Capacity(api.BuildResourceList("2", "4Gi")).
+		Obj()
+	n2 := util.MakeNode("n2").
+		Allocatable(api.BuildResourceList("4", "16Gi")).
+		Capacity(api.BuildResourceList("4", "16Gi")).
+		Obj()
 	hugeResource := api.BuildResourceList("20000m", "20G")
 	normalResource := api.BuildResourceList("2000m", "2G")
 	smallResource := api.BuildResourceList("200m", "0.5G")
@@ -31,8 +37,8 @@ func TestOvercommitPlugin(t *testing.T) {
 	// pg that no requires resources
 	pg3 := util.BuildPodGroup("pg2", "test-namespace", "c1", 2, nil, schedulingv1.PodGroupPhase(scheduling.PodGroupInqueue))
 
-	queue1 := util.BuildQueue("c1", 1, nil)
-	queue2 := util.BuildQueue("c1", 1, smallResource)
+	queue1 := util.MakeQueue("c1").Weight(1).Obj()
+	queue2 := util.MakeQueue("c2").Weight(1).Capability(smallResource).Obj()
 
 	tests := []struct {
 		uthelper.TestCommonStruct

@@ -54,11 +54,14 @@ func TestReclaim(t *testing.T) {
 				util.BuildPod("c1", "preemptor1", "", v1.PodPending, api.BuildResourceList("1", "1G"), "pg2", make(map[string]string), make(map[string]string)),
 			},
 			Nodes: []*v1.Node{
-				util.BuildNode("n1", api.BuildResourceList("3", "3Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string)),
+				util.MakeNode("n1").
+					Allocatable(api.BuildResourceList("3", "3Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Capacity(api.BuildResourceList("3", "3Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Obj(),
 			},
 			Queues: []*schedulingv1beta1.Queue{
-				util.BuildQueue("q1", 1, nil),
-				util.BuildQueue("q2", 1, nil),
+				util.MakeQueue("q1").Weight(1).Obj(),
+				util.MakeQueue("q2").Weight(1).Obj(),
 			},
 			ExpectEvictNum: 1,
 			ExpectEvicted:  []string{"c1/preemptee2"}, // let pod2 in the middle when sort tasks be preemptable and will not disturb
@@ -72,9 +75,9 @@ func TestReclaim(t *testing.T) {
 				proportion.PluginName:  proportion.New,
 			},
 			PriClass: []*schedulingv1.PriorityClass{
-				util.BuildPriorityClass("low-priority", 100),
-				util.BuildPriorityClass("mid-priority", 500),
-				util.BuildPriorityClass("high-priority", 1000),
+				util.MakePriorityClass("low-priority").Value(100).Obj(),
+				util.MakePriorityClass("mid-priority").Value(500).Obj(),
+				util.MakePriorityClass("high-priority").Value(1000).Obj(),
 			},
 			PodGroups: []*schedulingv1beta1.PodGroup{
 				util.BuildPodGroupWithPrio("pg1", "c1", "q1", 1, nil, schedulingv1beta1.PodGroupInqueue, "mid-priority"),
@@ -89,12 +92,15 @@ func TestReclaim(t *testing.T) {
 				util.BuildPod("c1", "preemptor1", "", v1.PodPending, api.BuildResourceList("1", "1G"), "pg3", make(map[string]string), make(map[string]string)),
 			},
 			Nodes: []*v1.Node{
-				util.BuildNode("n1", api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string)),
+				util.MakeNode("n1").
+					Allocatable(api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Capacity(api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Obj(),
 			},
 			Queues: []*schedulingv1beta1.Queue{
-				util.BuildQueue("q1", 1, nil),
-				util.BuildQueue("q2", 1, nil),
-				util.BuildQueue("q3", 1, nil),
+				util.MakeQueue("q1").Weight(1).Obj(),
+				util.MakeQueue("q2").Weight(1).Obj(),
+				util.MakeQueue("q3").Weight(1).Obj(),
 			},
 			ExpectEvictNum: 1,
 			ExpectEvicted:  []string{"c1/preemptee2-1"}, // low priority job's preemptable pod is evicted
@@ -119,12 +125,15 @@ func TestReclaim(t *testing.T) {
 				util.BuildPod("c1", "preemptor1", "", v1.PodPending, api.BuildResourceList("1", "1G"), "pg3", make(map[string]string), make(map[string]string)),
 			},
 			Nodes: []*v1.Node{
-				util.BuildNode("n1", api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string)),
+				util.MakeNode("n1").
+					Allocatable(api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Capacity(api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Obj(),
 			},
 			Queues: []*schedulingv1beta1.Queue{
-				util.BuildQueueWithPriorityAndResourcesQuantity("q1", 5, nil, nil),
-				util.BuildQueueWithPriorityAndResourcesQuantity("q2", 10, nil, nil), // highest queue priority
-				util.BuildQueueWithPriorityAndResourcesQuantity("q3", 1, nil, nil),
+				util.MakeQueue("q1").Weight(5).Obj(),
+				util.MakeQueue("q2").Weight(10).Obj(),
+				util.MakeQueue("q3").Weight(1).Obj(),
 			},
 			ExpectEvictNum: 1,
 			ExpectEvicted:  []string{"c1/preemptee1-1"}, // low queue priority job's preemptable pod is evicted
@@ -138,8 +147,8 @@ func TestReclaim(t *testing.T) {
 				proportion.PluginName:  proportion.New,
 			},
 			PriClass: []*schedulingv1.PriorityClass{
-				util.BuildPriorityClass("low-priority", 100),
-				util.BuildPriorityClassWithPreemptionPolicy("high-priority", 1000, v1.PreemptNever),
+				util.MakePriorityClass("low-priority").Value(100).Obj(),
+				util.MakePriorityClass("high-priority").Value(1000).PreemptionPolicy(v1.PreemptNever).Obj(),
 			},
 			PodGroups: []*schedulingv1beta1.PodGroup{
 				util.BuildPodGroupWithPrio("pg1", "c1", "q1", 0, nil, schedulingv1beta1.PodGroupInqueue, "low-priority"),
@@ -150,11 +159,14 @@ func TestReclaim(t *testing.T) {
 				util.BuildPodWithPreeemptionPolicy("c1", "preemptor1", "", v1.PodPending, api.BuildResourceList("1", "1G"), "pg2", make(map[string]string), make(map[string]string), v1.PreemptNever),
 			},
 			Nodes: []*v1.Node{
-				util.BuildNode("n1", api.BuildResourceList("1", "1Gi", []api.ScalarResource{{Name: "pods", Value: "1"}}...), make(map[string]string)),
+				util.MakeNode("n1").
+					Allocatable(api.BuildResourceList("1", "1Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Capacity(api.BuildResourceList("1", "1Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Obj(),
 			},
 			Queues: []*schedulingv1beta1.Queue{
-				util.BuildQueue("q1", 5, nil),
-				util.BuildQueue("q2", 10, nil),
+				util.MakeQueue("q1").Weight(5).Obj(),
+				util.MakeQueue("q2").Weight(10).Obj(),
 			},
 			ExpectEvictNum: 0,
 			ExpectEvicted:  []string{}, // no victims should be reclaimed

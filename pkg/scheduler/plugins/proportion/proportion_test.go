@@ -121,9 +121,20 @@ func TestProportion(t *testing.T) {
 	w3.Spec.Affinity = getWorkerAffinity()
 
 	// nodes
-	n1 := util.BuildNode("node1", api.BuildResourceList("4", "4k", []api.ScalarResource{{Name: "pods", Value: "10"}}...), map[string]string{"selector": "worker"})
-	n2 := util.BuildNode("node2", api.BuildResourceList("3", "3k", []api.ScalarResource{{Name: "pods", Value: "10"}}...), map[string]string{})
-	n3 := util.BuildNode("node3", api.BuildResourceList("4", "4k", []api.ScalarResource{{Name: "pods", Value: "10"}, {Name: "nvidia.com/gpu", Value: "8"}, {Name: "rdma/hca", Value: "1k"}}...), map[string]string{})
+	n1 := util.MakeNode("node1").
+		Allocatable(api.BuildResourceList("4", "4k", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("4", "4k", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Labels(map[string]string{"selector": "worker"}).
+		Obj()
+	n2 := util.MakeNode("node2").
+		Allocatable(api.BuildResourceList("3", "3k", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("3", "3k", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Obj()
+	n3 := util.MakeNode("node3").
+		Allocatable(api.BuildResourceList("4", "4k", []api.ScalarResource{{Name: "pods", Value: "10"}, {Name: "nvidia.com/gpu", Value: "8"}, {Name: "rdma/hca", Value: "1k"}}...)).
+		Capacity(api.BuildResourceList("4", "4k", []api.ScalarResource{{Name: "pods", Value: "10"}, {Name: "nvidia.com/gpu", Value: "8"}, {Name: "rdma/hca", Value: "1k"}}...)).
+		Labels(map[string]string{"selector": "worker"}).
+		Obj()
 	n1.Status.Allocatable["pods"] = resource.MustParse("15")
 	n2.Status.Allocatable["pods"] = resource.MustParse("15")
 	n3.Status.Allocatable["pods"] = resource.MustParse("15")
@@ -143,8 +154,8 @@ func TestProportion(t *testing.T) {
 	pg3.Spec.MinResources = &pgRes3
 
 	// queue
-	queue1 := util.BuildQueue("q1", 0, nil)
-	queue2 := util.BuildQueue("q2", 0, api.BuildResourceList("2", "2k", []api.ScalarResource{{Name: "pods", Value: "10"}, {Name: "nvidia.com/gpu", Value: "4"}}...))
+	queue1 := util.MakeQueue("q1").Weight(1).Obj()
+	queue2 := util.MakeQueue("q2").Weight(1).Capability(api.BuildResourceList("2", "2k", []api.ScalarResource{{Name: "pods", Value: "10"}, {Name: "nvidia.com/gpu", Value: "4"}}...)).Obj()
 
 	// tests
 	tests := []struct {
@@ -284,9 +295,14 @@ func TestProportion(t *testing.T) {
 
 func TestEnqueueAndAllocable(t *testing.T) {
 	// nodes
-	n1 := util.BuildNode("n1", api.BuildResourceList("2", "2G", []api.ScalarResource{{Name: "pods", Value: "10"}}...), nil)
-	n2 := util.BuildNode("n2", api.BuildResourceList("2", "2G", []api.ScalarResource{{Name: "pods", Value: "10"}}...), nil)
-
+	n1 := util.MakeNode("n1").
+		Allocatable(api.BuildResourceList("2", "2Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("2", "2Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Obj()
+	n2 := util.MakeNode("n2").
+		Allocatable(api.BuildResourceList("2", "2Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("2", "2Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Obj()
 	// resources
 	res1c2g := api.BuildResourceList("1", "2G")
 	res2c1g := api.BuildResourceList("2", "1G")
@@ -312,8 +328,8 @@ func TestEnqueueAndAllocable(t *testing.T) {
 	pg4.Spec.MinResources = &res0c1g
 	pg5.Spec.MinResources = &res1c1g
 
-	queue1 := util.BuildQueue("q1", 1, api.BuildResourceList("2", "2G"))
-	queue2 := util.BuildQueue("q2", 1, api.BuildResourceList("3", "3G"))
+	queue1 := util.MakeQueue("q1").Weight(1).Capability(api.BuildResourceList("3", "2Gi")).Obj()
+	queue2 := util.MakeQueue("q2").Weight(1).Capability(api.BuildResourceList("3", "3Gi")).Obj()
 
 	plugins := map[string]framework.PluginBuilder{PluginName: New}
 	trueValue, falseValue := true, false
@@ -431,9 +447,14 @@ func TestAllocate(t *testing.T) {
 	actions := []framework.Action{allocate.New(), reclaim.New()}
 
 	// nodes
-	n1 := util.BuildNode("n1", api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string))
-	n2 := util.BuildNode("n2", api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string))
-
+	n1 := util.MakeNode("n1").
+		Allocatable(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Obj()
+	n2 := util.MakeNode("n2").
+		Allocatable(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Obj()
 	// pod
 	p1 := util.BuildPod("ns1", "p1", "n1", apiv1.PodRunning, api.BuildResourceList("2", "4Gi"), "pg1", make(map[string]string), make(map[string]string))
 	p2 := util.BuildPod("ns1", "p2", "", apiv1.PodPending, api.BuildResourceList("2", "4Gi"), "pg2", make(map[string]string), make(map[string]string))
@@ -445,9 +466,9 @@ func TestAllocate(t *testing.T) {
 	pg3 := util.BuildPodGroup("pg3", "ns1", "q3", 1, nil, schedulingv1beta1.PodGroupInqueue)
 
 	// queue
-	queue1 := util.BuildQueueWithPriorityAndResourcesQuantity("q1", 5, nil, api.BuildResourceList("2", "4Gi"))
-	queue2 := util.BuildQueueWithPriorityAndResourcesQuantity("q2", 1, nil, api.BuildResourceList("2", "4Gi"))
-	queue3 := util.BuildQueueWithPriorityAndResourcesQuantity("q3", 10, nil, api.BuildResourceList("2", "4Gi"))
+	queue1 := util.MakeQueue("q1").Weight(1).Priority(5).Capability(api.BuildResourceList("2", "4Gi")).Obj()
+	queue2 := util.MakeQueue("q2").Weight(1).Priority(1).Capability(api.BuildResourceList("2", "4Gi")).Obj()
+	queue3 := util.MakeQueue("q3").Weight(1).Priority(10).Capability(api.BuildResourceList("2", "4Gi")).Obj()
 
 	tests := []uthelper.TestCommonStruct{
 		{

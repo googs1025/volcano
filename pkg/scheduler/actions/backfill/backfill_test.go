@@ -77,7 +77,7 @@ func TestPickUpPendingTasks(t *testing.T) {
 				util.BuildPodWithPriority("default", "pg2-unbesteffort-task-4", "", v1.PodPending, v1.ResourceList{"cpu": resource.MustParse("500m")}, "pg2", make(map[string]string), make(map[string]string), &priority4),
 			},
 			queues: []*schedulingv1beta1.Queue{
-				util.BuildQueue("q1", 1, nil),
+				util.MakeQueue("q1").Weight(1).Obj(),
 			},
 			podGroups: []*schedulingv1beta1.PodGroup{
 				util.BuildPodGroupWithPrio("pg1", "default", "q1", 1, map[string]int32{"": 3}, schedulingv1beta1.PodGroupInqueue, "job-priority-1"),

@@ -53,11 +53,17 @@ func TestShuffle(t *testing.T) {
 			Name:    "select pods with low priority and evict them",
 			Plugins: plugins,
 			Nodes: []*v1.Node{
-				util.BuildNode("node1", api.BuildResourceList("4", "8Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string)),
-				util.BuildNode("node2", api.BuildResourceList("4", "8Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string)),
+				util.MakeNode("node1").
+					Allocatable(api.BuildResourceList("4", "8Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Capacity(api.BuildResourceList("4", "8Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Obj(),
+				util.MakeNode("node2").
+					Allocatable(api.BuildResourceList("4", "8Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Capacity(api.BuildResourceList("4", "8Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Obj(),
 			},
 			Queues: []*schedulingv1beta1.Queue{
-				util.BuildQueue("default", 1, nil),
+				util.MakeQueue("default").Weight(1).Obj(),
 			},
 			PodGroups: []*schedulingv1beta1.PodGroup{
 				util.BuildPodGroup("pg1", "test", "default", 0, nil, schedulingv1beta1.PodGroupRunning),

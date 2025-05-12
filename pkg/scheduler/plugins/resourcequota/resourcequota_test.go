@@ -29,8 +29,8 @@ func TestResourceQuotaPlugin(t *testing.T) {
 	// pg that no set requires
 	pg3 := util.BuildPodGroup("pg3", "default", "c1", 2, nil, schedulingv1.PodGroupPhase(scheduling.PodGroupInqueue))
 
-	queue1 := util.BuildQueue("c1", 1, nil)
-	rq1 := util.BuildResourceQuota("test", "default", normalResource)
+	queue1 := util.MakeQueue("c1").Weight(1).Obj()
+	rq1 := util.MakeResourceQuota("test", "default").Hard(normalResource).Obj()
 
 	tests := []struct {
 		uthelper.TestCommonStruct

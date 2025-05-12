@@ -49,9 +49,15 @@ func Test_capacityPlugin_OnSessionOpenWithoutHierarchy(t *testing.T) {
 	actions := []framework.Action{allocate.New(), reclaim.New()}
 
 	// nodes
-	n1 := util.BuildNode("n1", api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), map[string]string{"selector": "worker"})
-	n2 := util.BuildNode("n2", api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), map[string]string{})
-
+	n1 := util.MakeNode("n1").
+		Allocatable(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Labels(map[string]string{"selector": "worker"}).
+		Obj()
+	n2 := util.MakeNode("n2").
+		Allocatable(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Obj()
 	// resources for test case 0
 	// pod
 	p1 := util.BuildPod("ns1", "p1", "n1", corev1.PodRunning, api.BuildResourceList("1", "1Gi"), "pg1", make(map[string]string), make(map[string]string))
@@ -60,7 +66,7 @@ func Test_capacityPlugin_OnSessionOpenWithoutHierarchy(t *testing.T) {
 	pg1 := util.BuildPodGroup("pg1", "ns1", "q1", 1, nil, schedulingv1beta1.PodGroupRunning)
 	pg2 := util.BuildPodGroup("pg2", "ns1", "q1", 1, nil, schedulingv1beta1.PodGroupInqueue)
 	// queue
-	queue1 := util.BuildQueueWithResourcesQuantity("q1", nil, api.BuildResourceList("2", "2Gi"))
+	queue1 := util.MakeQueue("q1").Weight(1).Capability(api.BuildResourceList("2", "2Gi")).Obj()
 
 	// resources for test case 1
 	// pod
@@ -70,7 +76,7 @@ func Test_capacityPlugin_OnSessionOpenWithoutHierarchy(t *testing.T) {
 	pg3 := util.BuildPodGroup("pg3", "ns1", "q2", 1, nil, schedulingv1beta1.PodGroupRunning)
 	pg4 := util.BuildPodGroup("pg4", "ns1", "q2", 1, nil, schedulingv1beta1.PodGroupInqueue)
 	// queue
-	queue2 := util.BuildQueueWithResourcesQuantity("q2", nil, api.BuildResourceList("1.5", "1.5Gi"))
+	queue2 := util.MakeQueue("q2").Weight(1).Capability(api.BuildResourceList("1.5", "1.5Gi")).Obj()
 
 	// resources for test case 2
 	// pod
@@ -81,13 +87,20 @@ func Test_capacityPlugin_OnSessionOpenWithoutHierarchy(t *testing.T) {
 	pg5 := util.BuildPodGroup("pg5", "ns1", "q3", 1, nil, schedulingv1beta1.PodGroupRunning)
 	pg6 := util.BuildPodGroup("pg6", "ns1", "q4", 1, nil, schedulingv1beta1.PodGroupInqueue)
 	// queue
-	queue3 := util.BuildQueueWithResourcesQuantity("q3", api.BuildResourceList("2", "4Gi"), nil)
-	queue4 := util.BuildQueueWithResourcesQuantity("q4", api.BuildResourceList("2", "4Gi"), nil)
+	queue3 := util.MakeQueue("q3").Weight(1).Deserved(api.BuildResourceList("2", "4Gi")).Obj()
+	queue4 := util.MakeQueue("q4").Weight(1).Deserved(api.BuildResourceList("2", "4Gi")).Obj()
 
 	// resources for test case3
 	// nodes
-	n3 := util.BuildNode("n3", api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "nvidia.com/A100", Value: "10"}, {Name: "pods", Value: "10"}}...), map[string]string{"selector": "worker"})
-	n4 := util.BuildNode("n4", api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "nvidia.com/A100", Value: "10"}, {Name: "pods", Value: "10"}}...), map[string]string{})
+	n3 := util.MakeNode("n3").
+		Allocatable(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "nvidia.com/A100", Value: "10"}, {Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "nvidia.com/A100", Value: "10"}, {Name: "pods", Value: "10"}}...)).
+		Labels(map[string]string{"selector": "worker"}).
+		Obj()
+	n4 := util.MakeNode("n4").
+		Allocatable(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "nvidia.com/A100", Value: "10"}, {Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "nvidia.com/A100", Value: "10"}, {Name: "pods", Value: "10"}}...)).
+		Obj()
 
 	// pod
 	p8 := util.BuildPod("ns1", "p8", "n3", corev1.PodRunning, api.BuildResourceList("0", "0Gi", []api.ScalarResource{{Name: "nvidia.com/A100", Value: "10"}}...), "pg7", map[string]string{schedulingv1beta1.PodPreemptable: "false"}, make(map[string]string))
@@ -104,14 +117,19 @@ func Test_capacityPlugin_OnSessionOpenWithoutHierarchy(t *testing.T) {
 	pg9 := util.BuildPodGroup("pg9", "ns1", "q6", 1, nil, schedulingv1beta1.PodGroupInqueue)
 
 	// queue
-	queue5 := util.BuildQueueWithResourcesQuantity("q5", api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "nvidia.com/A100", Value: "10"}}...), nil)
-	queue6 := util.BuildQueueWithResourcesQuantity("q6", api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "nvidia.com/A100", Value: "10"}}...), nil)
+	queue5 := util.MakeQueue("q5").Weight(1).Deserved(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "nvidia.com/A100", Value: "10"}}...)).Obj()
+	queue6 := util.MakeQueue("q6").Weight(1).Deserved(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "nvidia.com/A100", Value: "10"}}...)).Obj()
 
 	// resource for test case 4
 	// nodes
-	n5 := util.BuildNode("n5", api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string))
-	n6 := util.BuildNode("n6", api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string))
-
+	n5 := util.MakeNode("n5").
+		Allocatable(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Obj()
+	n6 := util.MakeNode("n6").
+		Allocatable(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("2", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Obj()
 	// pod
 	p13 := util.BuildPod("ns1", "p13", "n5", corev1.PodRunning, api.BuildResourceList("2", "4Gi"), "pg10", make(map[string]string), make(map[string]string))
 	p14 := util.BuildPod("ns1", "p14", "", corev1.PodPending, api.BuildResourceList("2", "4Gi"), "pg11", make(map[string]string), make(map[string]string))
@@ -123,9 +141,9 @@ func Test_capacityPlugin_OnSessionOpenWithoutHierarchy(t *testing.T) {
 	pg12 := util.BuildPodGroup("pg12", "ns1", "q9", 1, nil, schedulingv1beta1.PodGroupInqueue)
 
 	// queue
-	queue7 := util.BuildQueueWithPriorityAndResourcesQuantity("q7", 5, nil, api.BuildResourceList("2", "4Gi"))
-	queue8 := util.BuildQueueWithPriorityAndResourcesQuantity("q8", 1, nil, api.BuildResourceList("2", "4Gi"))
-	queue9 := util.BuildQueueWithPriorityAndResourcesQuantity("q9", 10, nil, api.BuildResourceList("2", "4Gi"))
+	queue7 := util.MakeQueue("q7").Weight(1).Priority(5).Capability(api.BuildResourceList("2", "4Gi")).Obj()
+	queue8 := util.MakeQueue("q8").Weight(1).Priority(1).Capability(api.BuildResourceList("2", "4Gi")).Obj()
+	queue9 := util.MakeQueue("q9").Weight(1).Priority(10).Capability(api.BuildResourceList("2", "4Gi")).Obj()
 
 	// case5: p16 + p17 in queue10 will exceed queue's deserved, is not preemptive
 	p16 := util.BuildPod("ns1", "p16", "n1", corev1.PodRunning, api.BuildResourceList("1", "3Gi"), "pg16", make(map[string]string), nil)
@@ -136,8 +154,8 @@ func Test_capacityPlugin_OnSessionOpenWithoutHierarchy(t *testing.T) {
 	pg17 := util.BuildPodGroup("pg17", "ns1", "q10", 1, nil, schedulingv1beta1.PodGroupInqueue)
 	pg18 := util.BuildPodGroup("pg18", "ns1", "q11", 1, nil, schedulingv1beta1.PodGroupRunning)
 	// queue
-	queue10 := util.BuildQueueWithResourcesQuantity("q10", api.BuildResourceList("2", "2Gi"), api.BuildResourceList("4", "4Gi"))
-	queue11 := util.BuildQueueWithResourcesQuantity("q11", api.BuildResourceList("0", "0Gi"), api.BuildResourceList("2", "2Gi"))
+	queue10 := util.MakeQueue("q10").Weight(1).Deserved(api.BuildResourceList("2", "2Gi")).Capability(api.BuildResourceList("4", "4Gi")).Obj()
+	queue11 := util.MakeQueue("q11").Weight(1).Deserved(api.BuildResourceList("0", "0Gi")).Capability(api.BuildResourceList("2", "2Gi")).Obj()
 
 	tests := []uthelper.TestCommonStruct{
 		{
@@ -248,8 +266,14 @@ func Test_capacityPlugin_OnSessionOpenWithoutHierarchy(t *testing.T) {
 
 func TestEnqueueAndAllocatable(t *testing.T) {
 	// nodes
-	n1 := util.BuildNode("n1", api.BuildResourceList("3", "3G", []api.ScalarResource{{Name: "pods", Value: "10"}}...), nil)
-	n2 := util.BuildNode("n2", api.BuildResourceList("3", "3G", []api.ScalarResource{{Name: "pods", Value: "10"}}...), nil)
+	n1 := util.MakeNode("n1").
+		Allocatable(api.BuildResourceList("3", "3Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("3", "3Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Obj()
+	n2 := util.MakeNode("n2").
+		Allocatable(api.BuildResourceList("3", "3Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("3", "3Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Obj()
 
 	// resources
 	res1c3g := api.BuildResourceList("1", "3G")
@@ -276,8 +300,8 @@ func TestEnqueueAndAllocatable(t *testing.T) {
 	pg4.Spec.MinResources = &res0c1g
 	pg5.Spec.MinResources = &res1c1g
 
-	queue1 := util.BuildQueueWithResourcesQuantity("q1", api.BuildResourceList("2", "2G"), api.BuildResourceList("2", "2G"))
-	queue2 := util.BuildQueueWithResourcesQuantity("q2", api.BuildResourceList("2", "2G"), api.BuildResourceList("3", "3G"))
+	queue1 := util.MakeQueue("q1").Weight(1).Deserved(api.BuildResourceList("2", "4Gi")).Capability(api.BuildResourceList("2", "2G")).Obj()
+	queue2 := util.MakeQueue("q2").Weight(1).Deserved(api.BuildResourceList("2", "4Gi")).Capability(api.BuildResourceList("3", "3G")).Obj()
 
 	plugins := map[string]framework.PluginBuilder{PluginName: New}
 	trueValue := true
@@ -347,19 +371,21 @@ func Test_capacityPlugin_OnSessionOpenWithHierarchy(t *testing.T) {
 	actions := []framework.Action{enqueue.New(), reclaim.New(), allocate.New()}
 
 	// nodes
-	n1 := util.BuildNode("n1", api.BuildResourceList("8", "8Gi", []api.ScalarResource{{Name: "pods", Value: "11"}}...), map[string]string{})
-
+	n1 := util.MakeNode("n1").
+		Allocatable(api.BuildResourceList("8", "8Gi", []api.ScalarResource{{Name: "pods", Value: "11"}}...)).
+		Capacity(api.BuildResourceList("8", "8Gi", []api.ScalarResource{{Name: "pods", Value: "11"}}...)).
+		Obj()
 	// resources for test case 0
 	// pod
 	p1 := util.BuildPod("ns1", "p1", "", corev1.PodPending, api.BuildResourceList("1", "1Gi"), "pg1", make(map[string]string), map[string]string{})
 	// podgroup
 	pg1 := util.BuildPodGroup("pg1", "ns1", "q11", 1, nil, schedulingv1beta1.PodGroupInqueue)
 	// queue
-	root := buildQueueWithParents("root", "", nil, nil)
-	queue1 := buildQueueWithParents("q1", "root", nil, api.BuildResourceList("4", "4Gi"))
-	queue2 := buildQueueWithParents("q2", "root", nil, api.BuildResourceList("4", "4Gi"))
-	queue11 := buildQueueWithParents("q11", "q1", nil, api.BuildResourceList("1", "1Gi"))
-	queue12 := buildQueueWithParents("q12", "q1", nil, api.BuildResourceList("3", "3Gi"))
+	root := util.MakeQueue("root").Weight(1).Parent("").Obj()
+	queue1 := util.MakeQueue("q1").Weight(1).Parent("root").Capability(api.BuildResourceList("4", "4Gi")).Obj()
+	queue2 := util.MakeQueue("q2").Weight(1).Parent("root").Capability(api.BuildResourceList("4", "4Gi")).Obj()
+	queue11 := util.MakeQueue("q11").Weight(1).Parent("q1").Capability(api.BuildResourceList("1", "1Gi")).Obj()
+	queue12 := util.MakeQueue("q12").Weight(1).Parent("q1").Capability(api.BuildResourceList("3", "3Gi")).Obj()
 
 	// resources for test case 1
 	// pod
@@ -374,11 +400,11 @@ func Test_capacityPlugin_OnSessionOpenWithHierarchy(t *testing.T) {
 	// podgroup
 	pg3 := util.BuildPodGroup("pg3", "ns1", "q31", 2, nil, schedulingv1beta1.PodGroupInqueue)
 	// queue
-	queue3 := buildQueueWithParents("q3", "root", api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...))
-	queue4 := buildQueueWithParents("q4", "root", api.BuildResourceList("2", "2Gi", []api.ScalarResource{{Name: "pods", Value: "1"}}...), api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "4"}}...))
-	queue31 := buildQueueWithParents("q31", "q3", api.BuildResourceList("2", "2Gi", []api.ScalarResource{{Name: "pods", Value: "2"}}...), api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "4"}}...))
-	queue32 := buildQueueWithParents("q32", "q3", api.BuildResourceList("2", "2Gi", []api.ScalarResource{{Name: "pods", Value: "2"}}...), api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "4"}}...))
-	queue33 := buildQueueWithParents("q33", "q3", api.BuildResourceList("0", "0Gi", []api.ScalarResource{{Name: "pods", Value: "2"}}...), api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "4"}}...))
+	queue3 := util.MakeQueue("q3").Weight(1).Parent("root").Deserved(api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).Capability(api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).Obj()
+	queue4 := util.MakeQueue("q4").Weight(1).Parent("root").Deserved(api.BuildResourceList("2", "2Gi", []api.ScalarResource{{Name: "pods", Value: "1"}}...)).Capability(api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "4"}}...)).Obj()
+	queue31 := util.MakeQueue("q31").Weight(1).Parent("q3").Deserved(api.BuildResourceList("2", "2Gi", []api.ScalarResource{{Name: "pods", Value: "2"}}...)).Capability(api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "4"}}...)).Obj()
+	queue32 := util.MakeQueue("q32").Weight(1).Parent("q3").Deserved(api.BuildResourceList("2", "2Gi", []api.ScalarResource{{Name: "pods", Value: "2"}}...)).Capability(api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "4"}}...)).Obj()
+	queue33 := util.MakeQueue("q33").Weight(1).Parent("q3").Deserved(api.BuildResourceList("0", "0Gi", []api.ScalarResource{{Name: "pods", Value: "2"}}...)).Capability(api.BuildResourceList("4", "4Gi", []api.ScalarResource{{Name: "pods", Value: "4"}}...)).Obj()
 
 	// resources for test case 3
 	// pod
@@ -398,8 +424,8 @@ func Test_capacityPlugin_OnSessionOpenWithHierarchy(t *testing.T) {
 
 	// resources for test case 5
 	// queue
-	queue5 := buildQueueWithParents("q5", "root", nil, api.BuildResourceList("", "4Gi", []api.ScalarResource{}...))
-	queue51 := buildQueueWithParents("q51", "q5", nil, api.BuildResourceList("", "2Gi", []api.ScalarResource{}...))
+	queue5 := util.MakeQueue("q5").Weight(1).Parent("root").Capability(api.BuildResourceList("", "4Gi")).Obj()
+	queue51 := util.MakeQueue("q51").Weight(1).Parent("q5").Capability(api.BuildResourceList("", "2Gi")).Obj()
 	// podgroup
 	pg9 := util.BuildPodGroup("pg9", "ns1", "q51", 1, nil, schedulingv1beta1.PodGroupRunning)
 	// pod
@@ -407,20 +433,20 @@ func Test_capacityPlugin_OnSessionOpenWithHierarchy(t *testing.T) {
 
 	// resources for test case 6
 	// queue
-	queue6 := buildQueueWithParents("q6", "root", nil, api.BuildResourceList("2", "4Gi", []api.ScalarResource{}...))
+	queue6 := util.MakeQueue("q6").Weight(1).Parent("root").Capability(api.BuildResourceList("2", "4Gi")).Obj()
 	// sub queue 61 and 62's capability is not specified, should be inherited from parent queue
-	queue61 := buildQueueWithParents("q61", "q6", nil, nil)
-	queue62 := buildQueueWithParents("q62", "q6", nil, nil)
+	queue61 := util.MakeQueue("q61").Weight(1).Parent("q6").Obj()
+	queue62 := util.MakeQueue("q62").Weight(1).Parent("q6").Obj()
 	// podgroup
 	pg10 := util.BuildPodGroupWithMinResources("pg10", "ns1", "q61", 1, nil, api.BuildResourceList("2", "4Gi"), schedulingv1beta1.PodGroupPending)
 	pg11 := util.BuildPodGroupWithMinResources("pg11", "ns1", "q62", 1, nil, api.BuildResourceList("2", "4Gi"), schedulingv1beta1.PodGroupPending)
 
 	// resources for test case 7
 	// queue
-	queue7 := buildQueueWithParents("q7", "root", nil, api.BuildResourceList("6", "4Gi", []api.ScalarResource{}...))
+	queue7 := util.MakeQueue("q7").Weight(1).Parent("root").Capability(api.BuildResourceList("6", "4Gi")).Obj()
 	// the sum of sub queue 71 and 72's guarantee exceeds the capacity of queue7, but should not panic
-	queue71 := buildQueueWithParents("q71", "q7", nil, api.BuildResourceList("6", "4Gi", []api.ScalarResource{}...))
-	queue72 := buildQueueWithParents("q72", "q7", nil, api.BuildResourceList("6", "4Gi", []api.ScalarResource{}...))
+	queue71 := util.MakeQueue("q71").Weight(1).Parent("q7").Capability(api.BuildResourceList("6", "4Gi")).Obj()
+	queue72 := util.MakeQueue("q72").Weight(1).Parent("q7").Capability(api.BuildResourceList("6", "4Gi")).Obj()
 	queue71.Spec.Guarantee = schedulingv1beta1.Guarantee{
 		Resource: corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("4"),
@@ -557,10 +583,4 @@ func Test_capacityPlugin_OnSessionOpenWithHierarchy(t *testing.T) {
 			}
 		})
 	}
-}
-
-func buildQueueWithParents(name string, parent string, deserved corev1.ResourceList, cap corev1.ResourceList) *schedulingv1beta1.Queue {
-	queue := util.BuildQueueWithResourcesQuantity(name, deserved, cap)
-	queue.Spec.Parent = parent
-	return queue
 }

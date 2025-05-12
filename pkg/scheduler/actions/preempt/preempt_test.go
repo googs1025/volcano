@@ -42,8 +42,8 @@ func TestPreempt(t *testing.T) {
 		priority.PluginName:    priority.New,
 		proportion.PluginName:  proportion.New,
 	}
-	highPrio := util.BuildPriorityClass("high-priority", 100000)
-	lowPrio := util.BuildPriorityClass("low-priority", 10)
+	highPrio := util.MakePriorityClass("high-priority").Value(100000).Obj()
+	lowPrio := util.MakePriorityClass("low-priority").Value(10).Obj()
 	options.Default()
 
 	tests := []uthelper.TestCommonStruct{
@@ -59,10 +59,13 @@ func TestPreempt(t *testing.T) {
 			},
 			// If there are enough idle resources on the node, then there is no need to preempt anything.
 			Nodes: []*v1.Node{
-				util.BuildNode("n1", api.BuildResourceList("10", "10G", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string)),
+				util.MakeNode("n1").
+					Allocatable(api.BuildResourceList("10", "10Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Capacity(api.BuildResourceList("10", "10Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Obj(),
 			},
 			Queues: []*schedulingv1beta1.Queue{
-				util.BuildQueue("q1", 1, nil),
+				util.MakeQueue("q1").Weight(1).Obj(),
 			},
 			ExpectEvictNum: 0,
 		},
@@ -81,10 +84,13 @@ func TestPreempt(t *testing.T) {
 			},
 			// All resources on the node will be in use.
 			Nodes: []*v1.Node{
-				util.BuildNode("n1", api.BuildResourceList("3", "3G", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string)),
+				util.MakeNode("n1").
+					Allocatable(api.BuildResourceList("3", "3Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Capacity(api.BuildResourceList("3", "3Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Obj(),
 			},
 			Queues: []*schedulingv1beta1.Queue{
-				util.BuildQueue("q1", 1, nil),
+				util.MakeQueue("q1").Weight(1).Obj(),
 			},
 			ExpectEvictNum: 0,
 		},
@@ -101,10 +107,13 @@ func TestPreempt(t *testing.T) {
 				util.BuildPod("c1", "preemptor2", "", v1.PodPending, api.BuildResourceList("1", "1G"), "pg2", make(map[string]string), make(map[string]string)),
 			},
 			Nodes: []*v1.Node{
-				util.BuildNode("n1", api.BuildResourceList("2", "2G", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string)),
+				util.MakeNode("n1").
+					Allocatable(api.BuildResourceList("2", "2Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Capacity(api.BuildResourceList("2", "2Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Obj(),
 			},
 			Queues: []*schedulingv1beta1.Queue{
-				util.BuildQueue("q1", 1, nil),
+				util.MakeQueue("q1").Weight(1).Obj(),
 			},
 			ExpectEvicted:  []string{"c1/preemptee1"},
 			ExpectEvictNum: 1,
@@ -124,10 +133,13 @@ func TestPreempt(t *testing.T) {
 				util.BuildPod("c1", "preemptor1", "", v1.PodPending, api.BuildResourceList("5", "5G"), "pg2", make(map[string]string), make(map[string]string)),
 			},
 			Nodes: []*v1.Node{
-				util.BuildNode("n1", api.BuildResourceList("6", "6G", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string)),
+				util.MakeNode("n1").
+					Allocatable(api.BuildResourceList("6", "6Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Capacity(api.BuildResourceList("6", "6Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Obj(),
 			},
 			Queues: []*schedulingv1beta1.Queue{
-				util.BuildQueue("q1", 1, nil),
+				util.MakeQueue("q1").Weight(1).Obj(),
 			},
 			ExpectEvicted:  []string{"c1/preemptee2", "c1/preemptee1"},
 			ExpectEvictNum: 2,
@@ -144,10 +156,13 @@ func TestPreempt(t *testing.T) {
 				util.BuildPod("c1", "preemptor1", "", v1.PodPending, api.BuildResourceList("3", "3G"), "pg2", make(map[string]string), make(map[string]string)),
 			},
 			Nodes: []*v1.Node{
-				util.BuildNode("n1", api.BuildResourceList("12", "12G", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string)),
+				util.MakeNode("n1").
+					Allocatable(api.BuildResourceList("12", "12Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Capacity(api.BuildResourceList("12", "12Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Obj(),
 			},
 			Queues: []*schedulingv1beta1.Queue{
-				util.BuildQueue("q1", 1, api.BuildResourceList("4", "4G")),
+				util.MakeQueue("q1").Weight(1).Capability(api.BuildResourceList("4", "4Gi")).Obj(),
 			},
 			ExpectEvicted:  []string{"c1/preemptee1"},
 			ExpectEvictNum: 1,
@@ -164,10 +179,13 @@ func TestPreempt(t *testing.T) {
 				util.BuildPod("c1", "preemptor1", "", v1.PodPending, api.BuildResourceList("3", "3G"), "pg2", make(map[string]string), make(map[string]string)),
 			},
 			Nodes: []*v1.Node{
-				util.BuildNode("n1", api.BuildResourceList("12", "12G", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string)),
+				util.MakeNode("n1").
+					Allocatable(api.BuildResourceList("12", "12Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Capacity(api.BuildResourceList("12", "12Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Obj(),
 			},
 			Queues: []*schedulingv1beta1.Queue{
-				util.BuildQueue("q1", 1, api.BuildResourceList("6", "6G")),
+				util.MakeQueue("q1").Weight(1).Capability(api.BuildResourceList("6", "6Gi")).Obj(),
 			},
 			ExpectEvictNum: 0,
 		},
@@ -185,10 +203,13 @@ func TestPreempt(t *testing.T) {
 				util.BuildPod("c1", "preemptor1", "", v1.PodPending, api.BuildResourceList("1", "1G"), "pg2", make(map[string]string), make(map[string]string)),
 			},
 			Nodes: []*v1.Node{
-				util.BuildNode("n1", api.BuildResourceList("12", "12G", []api.ScalarResource{{Name: "pods", Value: "10"}}...), make(map[string]string)),
+				util.MakeNode("n1").
+					Allocatable(api.BuildResourceList("12", "12Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Capacity(api.BuildResourceList("12", "12Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Obj(),
 			},
 			Queues: []*schedulingv1beta1.Queue{
-				util.BuildQueue("q1", 1, api.BuildResourceList("3", "3G")),
+				util.MakeQueue("q1").Weight(1).Capability(api.BuildResourceList("3", "3Gi")).Obj(),
 			},
 			ExpectEvicted:  []string{"c1/preemptee2"},
 			ExpectEvictNum: 1,
@@ -205,10 +226,13 @@ func TestPreempt(t *testing.T) {
 				util.BuildPod("c1", "preemptor1", "", v1.PodPending, api.BuildResourceList("3", "3G"), "pg2", make(map[string]string), make(map[string]string)),
 			},
 			Nodes: []*v1.Node{
-				util.BuildNode("n1", api.BuildResourceList("12", "12G", []api.ScalarResource{{Name: "pods", Value: "1"}}...), make(map[string]string)),
+				util.MakeNode("n1").
+					Allocatable(api.BuildResourceList("12", "12Gi", []api.ScalarResource{{Name: "pods", Value: "1"}}...)).
+					Capacity(api.BuildResourceList("12", "12Gi", []api.ScalarResource{{Name: "pods", Value: "1"}}...)).
+					Obj(),
 			},
 			Queues: []*schedulingv1beta1.Queue{
-				util.BuildQueue("q1", 1, api.BuildResourceList("6", "6G")),
+				util.MakeQueue("q1").Weight(1).Capability(api.BuildResourceList("6", "6Gi")).Obj(),
 			},
 			ExpectEvicted:  []string{"c1/preemptee1"},
 			ExpectEvictNum: 1,
@@ -225,10 +249,13 @@ func TestPreempt(t *testing.T) {
 				util.BuildPod("c1", "preemptor1", "", v1.PodPending, v1.ResourceList{}, "pg2", make(map[string]string), make(map[string]string)),
 			},
 			Nodes: []*v1.Node{
-				util.BuildNode("n1", api.BuildResourceList("12", "12G", []api.ScalarResource{{Name: "pods", Value: "1"}}...), make(map[string]string)),
+				util.MakeNode("n1").
+					Allocatable(api.BuildResourceList("12", "12Gi", []api.ScalarResource{{Name: "pods", Value: "1"}}...)).
+					Capacity(api.BuildResourceList("12", "12Gi", []api.ScalarResource{{Name: "pods", Value: "1"}}...)).
+					Obj(),
 			},
 			Queues: []*schedulingv1beta1.Queue{
-				util.BuildQueue("q1", 1, api.BuildResourceList("6", "6G")),
+				util.MakeQueue("q1").Weight(1).Capability(api.BuildResourceList("6", "6Gi")).Obj(),
 			},
 			ExpectEvicted:  []string{"c1/preemptee1"},
 			ExpectEvictNum: 1,
@@ -245,10 +272,13 @@ func TestPreempt(t *testing.T) {
 				util.BuildPodWithPreeemptionPolicy("c1", "preemptor1", "", v1.PodPending, api.BuildResourceList("1", "1G"), "pg2", make(map[string]string), make(map[string]string), v1.PreemptNever),
 			},
 			Nodes: []*v1.Node{
-				util.BuildNode("n1", api.BuildResourceList("1", "1Gi", []api.ScalarResource{{Name: "pods", Value: "1"}}...), make(map[string]string)),
+				util.MakeNode("n1").
+					Allocatable(api.BuildResourceList("1", "1Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Capacity(api.BuildResourceList("1", "1Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+					Obj(),
 			},
 			Queues: []*schedulingv1beta1.Queue{
-				util.BuildQueue("q1", 1, nil),
+				util.MakeQueue("q1").Weight(1).Obj(),
 			},
 			ExpectEvictNum: 0,
 			ExpectEvicted:  []string{}, // no victims should be reclaimed

@@ -114,23 +114,34 @@ func Test_TDM(t *testing.T) {
 	p1.Annotations[schedulingv2.RevocableZone] = "*"
 	p3.Annotations[schedulingv2.RevocableZone] = "*"
 
-	n1 := util.BuildNode("n1", api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), map[string]string{
-		schedulingv2.RevocableZone: "rz1",
-	})
+	n1 := util.MakeNode("n1").
+		Allocatable(api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Labels(map[string]string{schedulingv2.RevocableZone: "rz1"}).
+		Obj()
+	n2 := util.MakeNode("n2").
+		Allocatable(api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Labels(map[string]string{schedulingv2.RevocableZone: "rz1"}).
+		Obj()
+	n3 := util.MakeNode("n3").
+		Allocatable(api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Obj()
 
-	n2 := util.BuildNode("n2", api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), map[string]string{
-		schedulingv2.RevocableZone: "rz1",
-	})
+	n4 := util.MakeNode("n4").
+		Allocatable(api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Obj()
 
-	n3 := util.BuildNode("n3", api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), map[string]string{})
-	n4 := util.BuildNode("n4", api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), map[string]string{})
-
-	n5 := util.BuildNode("n5", api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), map[string]string{
-		schedulingv2.RevocableZone: "rz2",
-	})
+	n5 := util.MakeNode("n5").
+		Allocatable(api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Labels(map[string]string{schedulingv2.RevocableZone: "rz2"}).
+		Obj()
 
 	pg1 := util.BuildPodGroup("pg1", "c1", "c1", 0, nil, "")
-	queue1 := util.BuildQueue("c1", 1, nil)
+	queue1 := util.MakeQueue("c1").Weight(1).Obj()
 
 	tests := []struct {
 		uthelper.TestCommonStruct
@@ -296,16 +307,19 @@ func Test_TDM_victimsFn(t *testing.T) {
 	p9.Annotations[schedulingv2.PodPreemptable] = "true"
 	p10.Annotations[schedulingv2.PodPreemptable] = "true"
 
-	n1 := util.BuildNode("n1", api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), map[string]string{
-		schedulingv2.RevocableZone: "rz1",
-	})
+	n1 := util.MakeNode("n1").
+		Allocatable(api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Labels(map[string]string{schedulingv2.RevocableZone: "rz1"}).
+		Obj()
+	n2 := util.MakeNode("n2").
+		Allocatable(api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Capacity(api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...)).
+		Labels(map[string]string{schedulingv2.RevocableZone: "rz1"}).
+		Obj()
 
-	n2 := util.BuildNode("n2", api.BuildResourceList("16", "64Gi", []api.ScalarResource{{Name: "pods", Value: "10"}}...), map[string]string{
-		schedulingv2.RevocableZone: "rz1",
-	})
-
-	queue1 := util.BuildQueue("c1", 1, nil)
-	queue2 := util.BuildQueue("c2", 1, nil)
+	queue1 := util.MakeQueue("c1").Weight(1).Obj()
+	queue2 := util.MakeQueue("c2").Weight(1).Obj()
 
 	tests := []struct {
 		uthelper.TestCommonStruct
